@@ -60,7 +60,7 @@ export default function UserMenu() {
     return (
       <Link
         to="/login"
-        className="justify-self-end p-1 text-white/60 transition-colors duration-300 hover:text-white md:order-3"
+        className="p-1 text-white/60 transition-colors duration-300 hover:text-white"
         aria-label="Iniciar sesión"
       >
         <PersonIcon />
@@ -77,7 +77,7 @@ export default function UserMenu() {
     'block w-full px-5 py-3 text-left text-[10px] uppercase tracking-[0.25em] text-white/50 transition-colors duration-200 hover:bg-white/5 hover:text-white'
 
   return (
-    <div ref={rootRef} className="relative justify-self-end md:order-3">
+    <div ref={rootRef} className="relative">
       <button
         ref={triggerRef}
         type="button"

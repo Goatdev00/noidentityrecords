@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom'
 import { NAV_ITEMS } from '../../lib/constants'
 import UserMenu from './UserMenu'
+import CartButton from './CartButton'
 
 export default function Header() {
   return (
@@ -14,7 +15,10 @@ export default function Header() {
           NO.ID
         </Link>
 
-        <UserMenu />
+        <div className="flex items-center gap-4 justify-self-end md:order-3">
+          <CartButton />
+          <UserMenu />
+        </div>
 
         <nav
           aria-label="Navegación principal"
