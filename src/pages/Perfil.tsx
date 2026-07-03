@@ -42,11 +42,20 @@ export default function Perfil() {
   const downloadCertificate = async (cert: MyCertificate) => {
     setDownloadingId(cert.id)
     setError(null)
+    // open the tab synchronously inside the click gesture; after the await the
+    // browser would treat window.open as a pop-up and block it
+    const win = window.open('about:blank', '_blank')
     try {
       const { signed_url } = await issueCertificate(cert.course_id)
-      if (signed_url) window.open(signed_url, '_blank', 'noopener')
-      else setError('No se pudo obtener el certificado.')
+      if (signed_url) {
+        if (win) win.location.href = signed_url
+        else window.location.assign(signed_url)
+      } else {
+        win?.close()
+        setError('No se pudo obtener el certificado.')
+      }
     } catch (e) {
+      win?.close()
       setError(e instanceof Error ? e.message : 'No se pudo obtener el certificado.')
     } finally {
       setDownloadingId(null)

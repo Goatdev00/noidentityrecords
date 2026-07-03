@@ -304,10 +304,18 @@ export default function Aprender() {
               onClick={async () => {
                 setCertBusy(true)
                 setCertError(null)
+                // pre-open the tab in the gesture so it isn't pop-up-blocked
+                const win = window.open('about:blank', '_blank')
                 try {
                   const { signed_url } = await issueCertificate(course.id)
-                  if (signed_url) window.open(signed_url, '_blank', 'noopener')
+                  if (signed_url) {
+                    if (win) win.location.href = signed_url
+                    else window.location.assign(signed_url)
+                  } else {
+                    win?.close()
+                  }
                 } catch (e) {
+                  win?.close()
                   setCertError(e instanceof Error ? e.message : 'No se pudo generar el certificado.')
                 } finally {
                   setCertBusy(false)
