@@ -1,6 +1,11 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import AudioEmbed from '../components/AudioEmbed'
-import { MEDIA_EMBEDS, OTHER_PLATFORMS } from '../data/mediaEmbeds'
+import {
+  MEDIA_EMBEDS,
+  OTHER_PLATFORMS,
+  type MediaEmbed,
+} from '../data/mediaEmbeds'
+import { supabase } from '../lib/supabase'
 
 /** Section with the original left-aligned label treatment (tracking 0.8em, 40%). */
 function Section({ label, children }: { label: string; children: ReactNode }) {
@@ -13,10 +18,31 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export default function Musica() {
-  const bandcamp = MEDIA_EMBEDS.filter(
+  // media_embeds is the source of truth (editable from the dashboard without
+  // touching code); the static module is the fallback if the fetch fails
+  const [embeds, setEmbeds] = useState<MediaEmbed[]>(MEDIA_EMBEDS)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .from('media_embeds')
+      .select('id, platform, title, meta, embed_url, height, position, active')
+      .eq('active', true)
+      .order('position')
+      .then(({ data, error }) => {
+        if (!cancelled && !error && data && data.length > 0) {
+          setEmbeds(data as MediaEmbed[])
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const bandcamp = embeds.filter(
     (e) => e.active && e.platform === 'bandcamp',
   ).sort((a, b) => a.position - b.position)
-  const soundcloud = MEDIA_EMBEDS.filter(
+  const soundcloud = embeds.filter(
     (e) => e.active && e.platform === 'soundcloud',
   ).sort((a, b) => a.position - b.position)
 

@@ -1,22 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { NAV_ITEMS } from '../../lib/constants'
-
-function PersonIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.25"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" />
-    </svg>
-  )
-}
+import UserMenu from './UserMenu'
 
 export default function Header() {
   return (
@@ -30,13 +14,7 @@ export default function Header() {
           NO.ID
         </Link>
 
-        <Link
-          to="/login"
-          className="justify-self-end p-1 text-white/60 transition-colors duration-300 hover:text-white md:order-3"
-          aria-label="Iniciar sesión"
-        >
-          <PersonIcon />
-        </Link>
+        <UserMenu />
 
         <nav
           aria-label="Navegación principal"
