@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import ConfirmDialog from '../ConfirmDialog'
 import {
   fetchLessonContent,
   saveLessonContent,
@@ -17,10 +18,19 @@ type Props = {
   onSaved: (patch: Pick<PanelLesson, 'title' | 'subtitle' | 'description'>) => void
 }
 
+type Snapshot = {
+  title: string
+  subtitle: string
+  description: string
+  videoUrl: string
+  links: string
+}
+
 /**
  * Full-screen sober editor for one lesson: metadata + video link + extra
  * links. Video is ALWAYS an external link (YouTube/Vimeo) — no file uploads,
- * ever (brief rule).
+ * ever (brief rule). Traps focus, restores it on close, and asks before
+ * discarding unsaved edits.
  */
 export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(lesson.title)
@@ -31,6 +41,11 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+
+  const panelRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const baseline = useRef<Snapshot | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -39,6 +54,13 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
         if (cancelled) return
         setVideoUrl(c.video_url ?? '')
         setLinks(c.links)
+        baseline.current = {
+          title: lesson.title,
+          subtitle: lesson.subtitle ?? '',
+          description: lesson.description ?? '',
+          videoUrl: c.video_url ?? '',
+          links: JSON.stringify(c.links),
+        }
         setLoading(false)
       })
       .catch(() => {
@@ -50,15 +72,60 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
     return () => {
       cancelled = true
     }
-  }, [lesson.id])
+  }, [lesson.id, lesson.title, lesson.subtitle, lesson.description])
+
+  const isDirty = () => {
+    const b = baseline.current
+    if (!b) return false
+    return (
+      title !== b.title ||
+      subtitle !== b.subtitle ||
+      description !== b.description ||
+      videoUrl !== b.videoUrl ||
+      JSON.stringify(links) !== b.links
+    )
+  }
+
+  const requestClose = () => {
+    if (isDirty()) setConfirmDiscard(true)
+    else onClose()
+  }
+
+  // focus: into the dialog on open, trapped while open, back to opener after
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    return () => opener?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (!loading) titleRef.current?.focus()
+  }, [loading])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        // let a nested confirm dialog own Escape while it's open
+        if (!confirmDiscard) requestClose()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current || confirmDiscard) return
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  })
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -87,10 +154,11 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
     <div
       className="fixed inset-0 z-[90] overflow-y-auto bg-black/90 backdrop-blur-sm"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) requestClose()
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={`Editar lección: ${lesson.title}`}
@@ -100,7 +168,7 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
           <h2 className="noid-title text-sm text-white">EDITAR LECCIÓN</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Cerrar editor"
             className="p-2 text-white/40 transition-colors hover:text-white"
           >
@@ -120,6 +188,7 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
               </label>
               <input
                 id="l-title"
+                ref={titleRef}
                 type="text"
                 required
                 value={title}
@@ -223,7 +292,7 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
             <div className="flex justify-end gap-4 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
                 className="px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-white/40 transition-colors hover:text-white"
               >
                 Cancelar
@@ -235,6 +304,15 @@ export default function LessonEditor({ lesson, onClose, onSaved }: Props) {
           </form>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        title="DESCARTAR CAMBIOS"
+        copy="TIENES CAMBIOS SIN GUARDAR. SI SALES AHORA, SE PERDERÁN."
+        confirmLabel="Salir sin guardar"
+        onConfirm={onClose}
+        onCancel={() => setConfirmDiscard(false)}
+      />
     </div>
   )
 }

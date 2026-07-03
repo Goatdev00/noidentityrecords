@@ -9,7 +9,8 @@ type Props = {
   onCancel: () => void
 }
 
-/** Sober confirmation: black card, hairline border, two buttons. */
+/** Sober confirmation: black card, hairline border, two buttons.
+ *  Traps focus while open and restores it to the opener on close. */
 export default function ConfirmDialog({
   open,
   title,
@@ -18,16 +19,39 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
+    const opener = document.activeElement as HTMLElement | null
     confirmRef.current?.focus()
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') {
+        onCancel()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      )
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      opener?.focus()
+    }
   }, [open, onCancel])
 
   if (!open) return null
@@ -40,6 +64,7 @@ export default function ConfirmDialog({
       }}
     >
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
         aria-label={title}

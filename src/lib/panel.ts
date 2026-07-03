@@ -184,6 +184,26 @@ export async function duplicateLesson(lesson: PanelLesson, position: number): Pr
   return { ...copy, subtitle: lesson.subtitle, description: lesson.description }
 }
 
+/** Duplicate a module with all its lessons (and their content), at the end. */
+export async function duplicateModule(
+  courseId: string,
+  module: PanelModule,
+  position: number,
+): Promise<PanelModule> {
+  const copy = await createModule(courseId, `${module.title} (copia)`, position)
+  const lessons: PanelLesson[] = []
+  for (const [i, lesson] of module.lessons.entries()) {
+    const l = await createLesson(copy.id, lesson.title, i + 1)
+    await updateLesson(l.id, { subtitle: lesson.subtitle, description: lesson.description })
+    const content = await fetchLessonContent(lesson.id)
+    if (content.video_url || content.links.length > 0) {
+      await saveLessonContent(l.id, content)
+    }
+    lessons.push({ ...l, subtitle: lesson.subtitle, description: lesson.description })
+  }
+  return { ...copy, lessons }
+}
+
 /** Persist new positions after a drag (and module move if it changed). */
 export async function persistPositions(modules: PanelModule[]): Promise<void> {
   const moduleUpdates = modules.map((m, i) =>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   DndContext,
   KeyboardSensor,
@@ -6,8 +6,10 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -25,6 +27,7 @@ import {
   deleteLesson,
   deleteModule,
   duplicateLesson,
+  duplicateModule,
   persistPositions,
   renameModule,
   type PanelLesson,
@@ -52,15 +55,17 @@ function DragHandle(props: Record<string, unknown>) {
 }
 
 const rowButton =
-  'text-[9px] uppercase tracking-[0.25em] text-white/35 transition-colors hover:text-white'
+  'text-[9px] uppercase tracking-[0.25em] text-white/35 transition-colors hover:text-white disabled:opacity-40'
 
 function SortableLesson({
   lesson,
+  busy,
   onEdit,
   onDuplicate,
   onDelete,
 }: {
   lesson: PanelLesson
+  busy: boolean
   onEdit: () => void
   onDuplicate: () => void
   onDelete: () => void
@@ -89,7 +94,7 @@ function SortableLesson({
         <button type="button" onClick={onEdit} className={rowButton}>
           Editar
         </button>
-        <button type="button" onClick={onDuplicate} className={rowButton}>
+        <button type="button" onClick={onDuplicate} disabled={busy} className={rowButton}>
           Duplicar
         </button>
         <button type="button" onClick={onDelete} className={rowButton}>
@@ -103,21 +108,30 @@ function SortableLesson({
 function SortableModule({
   module,
   index,
+  busy,
   children,
   onRename,
+  onDuplicate,
   onDelete,
   onAddLesson,
 }: {
   module: PanelModule
   index: number
+  busy: boolean
   children: React.ReactNode
   onRename: (title: string) => void
+  onDuplicate: () => void
   onDelete: () => void
   onAddLesson: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: module.id, data: { type: 'module' } })
   const [title, setTitle] = useState(module.title)
+
+  // resync when the prop changes (failed rename revert, reload, etc.)
+  useEffect(() => {
+    setTitle(module.title)
+  }, [module.title])
 
   return (
     <section
@@ -144,8 +158,11 @@ function SortableModule({
           className="min-w-0 flex-1 border-0 bg-transparent font-display text-[11px] uppercase tracking-[0.2em] text-white focus:outline-none"
         />
         <div className="flex shrink-0 gap-4">
-          <button type="button" onClick={onAddLesson} className={rowButton}>
+          <button type="button" onClick={onAddLesson} disabled={busy} className={rowButton}>
             + Lección
+          </button>
+          <button type="button" onClick={onDuplicate} disabled={busy} className={rowButton}>
+            Duplicar
           </button>
           <button type="button" onClick={onDelete} className={rowButton}>
             Eliminar
@@ -162,9 +179,11 @@ type PendingDelete =
   | { kind: 'lesson'; id: string; title: string }
 
 /**
- * Modules & lessons editor: create, rename, delete, duplicate, and reorder
- * with drag & drop (lessons can move across modules). Every drop persists
- * `position` (and `module_id`) to the database.
+ * Modules & lessons editor: create, rename, delete, duplicate (both levels),
+ * and reorder with drag & drop (lessons move across modules). Every drop
+ * persists `position`/`module_id`; a cancelled drag restores the pre-drag
+ * snapshot. All state updates are functional — concurrent saves never
+ * clobber each other.
  */
 export default function ContentEditor({
   courseId,
@@ -174,46 +193,66 @@ export default function ContentEditor({
 }: {
   courseId: string
   modules: PanelModule[]
-  setModules: (m: PanelModule[]) => void
+  setModules: Dispatch<SetStateAction<PanelModule[]>>
   reload: () => void
 }) {
   const [editing, setEditing] = useState<PanelLesson | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [newModuleTitle, setNewModuleTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [mutating, setMutating] = useState(false)
+  const dragSnapshot = useRef<PanelModule[] | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const findModuleOf = (lessonId: string) =>
-    modules.find((m) => m.lessons.some((l) => l.id === lessonId))
-
-  const persist = async (next: PanelModule[]) => {
-    setModules(next)
-    try {
-      await persistPositions(next)
-    } catch {
-      setError('No se pudo guardar el orden. Recargando…')
-      reload()
+  // module drags only consider module containers — otherwise closestCenter
+  // often resolves to a lesson id and the reorder silently no-ops
+  const collisionDetection: CollisionDetection = (args) => {
+    if (args.active.data.current?.type === 'module') {
+      const moduleIds = new Set(modules.map((m) => m.id))
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter((c) =>
+          moduleIds.has(String(c.id)),
+        ),
+      })
     }
+    return closestCenter(args)
+  }
+
+  const findModuleOf = (list: PanelModule[], lessonId: string) =>
+    list.find((m) => m.lessons.some((l) => l.id === lessonId))
+
+  const onDragStart = (_e: DragStartEvent) => {
+    dragSnapshot.current = modules
+  }
+
+  const onDragCancel = () => {
+    // Escape / pointercancel: dnd-kit fires cancel, not end — undo the
+    // cross-module moves onDragOver already applied locally
+    if (dragSnapshot.current) setModules(dragSnapshot.current)
+    dragSnapshot.current = null
   }
 
   const onDragOver = (e: DragOverEvent) => {
     const { active, over } = e
     if (!over || active.data.current?.type !== 'lesson') return
-    const activeModule = findModuleOf(String(active.id))
-    const overModule =
-      modules.find((m) => m.id === String(over.id)) ?? findModuleOf(String(over.id))
-    if (!activeModule || !overModule || activeModule.id === overModule.id) return
-
-    // move the lesson into the module it's hovering over
-    const lesson = activeModule.lessons.find((l) => l.id === String(active.id))!
-    const overIndex = overModule.lessons.findIndex((l) => l.id === String(over.id))
-    const insertAt = overIndex >= 0 ? overIndex : overModule.lessons.length
-    setModules(
-      modules.map((m) => {
+    setModules((current) => {
+      const activeModule = findModuleOf(current, String(active.id))
+      const overModule =
+        current.find((m) => m.id === String(over.id)) ??
+        findModuleOf(current, String(over.id))
+      if (!activeModule || !overModule || activeModule.id === overModule.id) {
+        return current
+      }
+      const lesson = activeModule.lessons.find((l) => l.id === String(active.id))
+      if (!lesson) return current
+      const overIndex = overModule.lessons.findIndex((l) => l.id === String(over.id))
+      const insertAt = overIndex >= 0 ? overIndex : overModule.lessons.length
+      return current.map((m) => {
         if (m.id === activeModule.id)
           return { ...m, lessons: m.lessons.filter((l) => l.id !== lesson.id) }
         if (m.id === overModule.id) {
@@ -222,104 +261,114 @@ export default function ContentEditor({
           return { ...m, lessons }
         }
         return m
-      }),
-    )
+      })
+    })
   }
 
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
-    if (!over || active.id === over.id) {
-      if (active.data.current?.type === 'lesson') void persist(modules)
-      return
-    }
+    dragSnapshot.current = null
 
-    if (active.data.current?.type === 'module') {
-      const from = modules.findIndex((m) => m.id === String(active.id))
-      const to = modules.findIndex((m) => m.id === String(over.id))
-      if (from >= 0 && to >= 0) void persist(arrayMove(modules, from, to))
-      return
-    }
-
-    // lesson reorder within its (possibly new) module
-    const mod = findModuleOf(String(active.id))
-    if (!mod) return
-    const from = mod.lessons.findIndex((l) => l.id === String(active.id))
-    const to = mod.lessons.findIndex((l) => l.id === String(over.id))
-    const next =
-      from >= 0 && to >= 0
-        ? modules.map((m) =>
-            m.id === mod.id ? { ...m, lessons: arrayMove(m.lessons, from, to) } : m,
-          )
-        : modules
-    void persist(next)
+    setModules((current) => {
+      let next = current
+      if (active.data.current?.type === 'module') {
+        const overId = String(over?.id ?? '')
+        const from = current.findIndex((m) => m.id === String(active.id))
+        // over may be a lesson despite the filter (edge cases) — fall back
+        // to the lesson's parent module
+        const to = current.findIndex(
+          (m) => m.id === overId || m.lessons.some((l) => l.id === overId),
+        )
+        if (from >= 0 && to >= 0 && from !== to) next = arrayMove(current, from, to)
+      } else {
+        const mod = findModuleOf(current, String(active.id))
+        if (mod && over) {
+          const from = mod.lessons.findIndex((l) => l.id === String(active.id))
+          const to = mod.lessons.findIndex((l) => l.id === String(over.id))
+          if (from >= 0 && to >= 0 && from !== to) {
+            next = current.map((m) =>
+              m.id === mod.id ? { ...m, lessons: arrayMove(m.lessons, from, to) } : m,
+            )
+          }
+        }
+      }
+      // persist whatever the tree looks like after the drop — also covers
+      // cross-module moves already applied by onDragOver
+      persistPositions(next).catch(() => {
+        setError('No se pudo guardar el orden. Recargando…')
+        reload()
+      })
+      return next
+    })
   }
 
-  const addModule = async () => {
-    const title = newModuleTitle.trim()
-    if (!title) return
+  const guarded = async (fn: () => Promise<void>, failMsg: string) => {
+    if (mutating) return
+    setMutating(true)
     setError(null)
     try {
-      const mod = await createModule(courseId, title, modules.length + 1)
-      setModules([...modules, mod])
-      setNewModuleTitle('')
+      await fn()
     } catch {
-      setError('No se pudo crear el módulo.')
+      setError(failMsg)
+    } finally {
+      setMutating(false)
     }
   }
 
-  const addLesson = async (moduleId: string) => {
-    setError(null)
-    const mod = modules.find((m) => m.id === moduleId)
-    if (!mod) return
-    try {
+  const addModule = () =>
+    guarded(async () => {
+      const title = newModuleTitle.trim()
+      if (!title) return
+      const mod = await createModule(courseId, title, modules.length + 1)
+      setModules((prev) => [...prev, mod])
+      setNewModuleTitle('')
+    }, 'No se pudo crear el módulo.')
+
+  const addLesson = (moduleId: string) =>
+    guarded(async () => {
+      const mod = modules.find((m) => m.id === moduleId)
+      if (!mod) return
       const lesson = await createLesson(moduleId, 'Nueva lección', mod.lessons.length + 1)
-      setModules(
-        modules.map((m) =>
-          m.id === moduleId ? { ...m, lessons: [...m.lessons, lesson] } : m,
-        ),
+      setModules((prev) =>
+        prev.map((m) => (m.id === moduleId ? { ...m, lessons: [...m.lessons, lesson] } : m)),
       )
       setEditing(lesson)
-    } catch {
-      setError('No se pudo crear la lección.')
-    }
-  }
+    }, 'No se pudo crear la lección.')
+
+  const onDuplicateLesson = (lesson: PanelLesson) =>
+    guarded(async () => {
+      const mod = findModuleOf(modules, lesson.id)
+      if (!mod) return
+      const copy = await duplicateLesson(lesson, mod.lessons.length + 1)
+      setModules((prev) =>
+        prev.map((m) => (m.id === mod.id ? { ...m, lessons: [...m.lessons, copy] } : m)),
+      )
+    }, 'No se pudo duplicar la lección.')
+
+  const onDuplicateModule = (mod: PanelModule) =>
+    guarded(async () => {
+      const copy = await duplicateModule(courseId, mod, modules.length + 1)
+      setModules((prev) => [...prev, copy])
+    }, 'No se pudo duplicar el módulo.')
 
   const confirmDelete = async () => {
     if (!pendingDelete) return
+    const target = pendingDelete
     setError(null)
     try {
-      if (pendingDelete.kind === 'module') {
-        await deleteModule(pendingDelete.id)
-        setModules(modules.filter((m) => m.id !== pendingDelete.id))
+      if (target.kind === 'module') {
+        await deleteModule(target.id)
+        setModules((prev) => prev.filter((m) => m.id !== target.id))
       } else {
-        await deleteLesson(pendingDelete.id)
-        setModules(
-          modules.map((m) => ({
-            ...m,
-            lessons: m.lessons.filter((l) => l.id !== pendingDelete.id),
-          })),
+        await deleteLesson(target.id)
+        setModules((prev) =>
+          prev.map((m) => ({ ...m, lessons: m.lessons.filter((l) => l.id !== target.id) })),
         )
       }
     } catch {
       setError('No se pudo eliminar. Intenta de nuevo.')
     } finally {
       setPendingDelete(null)
-    }
-  }
-
-  const onDuplicate = async (lesson: PanelLesson) => {
-    setError(null)
-    const mod = findModuleOf(lesson.id)
-    if (!mod) return
-    try {
-      const copy = await duplicateLesson(lesson, mod.lessons.length + 1)
-      setModules(
-        modules.map((m) =>
-          m.id === mod.id ? { ...m, lessons: [...m.lessons, copy] } : m,
-        ),
-      )
-    } catch {
-      setError('No se pudo duplicar la lección.')
     }
   }
 
@@ -343,7 +392,7 @@ export default function ContentEditor({
         <button
           type="button"
           onClick={() => void addModule()}
-          disabled={!newModuleTitle.trim()}
+          disabled={!newModuleTitle.trim() || mutating}
           className="noid-button disabled:opacity-40"
         >
           + Módulo
@@ -366,7 +415,9 @@ export default function ContentEditor({
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={collisionDetection}
+          onDragStart={onDragStart}
+          onDragCancel={onDragCancel}
           onDragOver={onDragOver}
           onDragEnd={onDragEnd}
         >
@@ -377,15 +428,21 @@ export default function ContentEditor({
                   key={mod.id}
                   module={mod}
                   index={mi}
+                  busy={mutating}
                   onRename={(t) =>
                     renameModule(mod.id, t)
                       .then(() =>
-                        setModules(
-                          modules.map((m) => (m.id === mod.id ? { ...m, title: t } : m)),
+                        setModules((prev) =>
+                          prev.map((m) => (m.id === mod.id ? { ...m, title: t } : m)),
                         ),
                       )
-                      .catch(() => setError('No se pudo renombrar el módulo.'))
+                      .catch(() => {
+                        setError('No se pudo renombrar el módulo.')
+                        // resync effect reverts the input to the saved title
+                        setModules((prev) => [...prev])
+                      })
                   }
+                  onDuplicate={() => void onDuplicateModule(mod)}
                   onDelete={() =>
                     setPendingDelete({ kind: 'module', id: mod.id, title: mod.title })
                   }
@@ -405,8 +462,9 @@ export default function ContentEditor({
                           <SortableLesson
                             key={lesson.id}
                             lesson={lesson}
+                            busy={mutating}
                             onEdit={() => setEditing(lesson)}
-                            onDuplicate={() => void onDuplicate(lesson)}
+                            onDuplicate={() => void onDuplicateLesson(lesson)}
                             onDelete={() =>
                               setPendingDelete({
                                 kind: 'lesson',
@@ -431,12 +489,10 @@ export default function ContentEditor({
           lesson={editing}
           onClose={() => setEditing(null)}
           onSaved={(patch) =>
-            setModules(
-              modules.map((m) => ({
+            setModules((prev) =>
+              prev.map((m) => ({
                 ...m,
-                lessons: m.lessons.map((l) =>
-                  l.id === editing.id ? { ...l, ...patch } : l,
-                ),
+                lessons: m.lessons.map((l) => (l.id === editing.id ? { ...l, ...patch } : l)),
               })),
             )
           }

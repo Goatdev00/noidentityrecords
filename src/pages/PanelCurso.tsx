@@ -23,7 +23,16 @@ const labelClass = 'text-[10px] uppercase tracking-[0.3em] text-white/40'
 type State =
   | { status: 'loading' }
   | { status: 'notfound' }
+  | { status: 'error' }
   | { status: 'ready'; course: PanelCourse }
+
+type SavePayload = {
+  title: string
+  subtitle: string | null
+  slug: string
+  description: string | null
+  price_cop: number
+}
 
 export default function PanelCurso() {
   const { id } = useParams<{ id: string }>()
@@ -42,6 +51,7 @@ export default function PanelCurso() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [pendingSave, setPendingSave] = useState<SavePayload | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = async () => {
@@ -61,7 +71,8 @@ export default function PanelCurso() {
   }
 
   useEffect(() => {
-    load().catch(() => setState({ status: 'notfound' }))
+    // network failures are NOT "curso no encontrado"
+    load().catch(() => setState({ status: 'error' }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -83,50 +94,64 @@ export default function PanelCurso() {
     )
   }
 
+  if (state.status === 'error') {
+    return (
+      <EmptyState
+        label="PANEL DE MAESTRO"
+        title="ALGO SALIÓ MAL"
+        copy="NO PUDIMOS CARGAR EL CURSO. REVISA TU CONEXIÓN Y RECARGA LA PÁGINA."
+      />
+    )
+  }
+
   const { course } = state
 
-  const saveInfo = async (e: FormEvent) => {
-    e.preventDefault()
+  const doSave = async (payload: SavePayload) => {
     setSaving(true)
     setNotice(null)
     setError(null)
-    const priceNum = Math.round(Number(price))
-    if (!Number.isFinite(priceNum) || priceNum < 1000) {
-      setError('El precio mínimo es 1.000 COP (sin decimales).')
-      setSaving(false)
-      return
-    }
     try {
-      const cleanSlug = slugify(slug || title)
-      await updateCourse(course.id, {
-        title: title.trim() || course.title,
-        subtitle: subtitle.trim() || null,
-        slug: cleanSlug,
-        description: description.trim() || null,
-        price_cop: priceNum,
-      })
-      setSlug(cleanSlug)
+      await updateCourse(course.id, payload)
+      setSlug(payload.slug)
       setNotice('GUARDADO.')
-      setState({
-        status: 'ready',
-        course: {
-          ...course,
-          title: title.trim() || course.title,
-          subtitle: subtitle.trim() || null,
-          slug: cleanSlug,
-          description: description.trim() || null,
-          price_cop: priceNum,
-        },
-      })
+      setState((prev) =>
+        prev.status === 'ready'
+          ? { status: 'ready', course: { ...prev.course, ...payload } }
+          : prev,
+      )
     } catch (err) {
       setError(
-        err instanceof Error && err.message.includes('duplicate')
+        err instanceof Error && (err.message.includes('duplicate') || err.message.includes('23505'))
           ? 'Ese slug ya está en uso por otro curso.'
           : 'No se pudo guardar. Intenta de nuevo.',
       )
     } finally {
       setSaving(false)
     }
+  }
+
+  const saveInfo = (e: FormEvent) => {
+    e.preventDefault()
+    setNotice(null)
+    setError(null)
+    const priceNum = Math.round(Number(price))
+    if (!Number.isFinite(priceNum) || priceNum < 1000) {
+      setError('El precio mínimo es 1.000 COP (sin decimales).')
+      return
+    }
+    const payload: SavePayload = {
+      title: title.trim() || course.title,
+      subtitle: subtitle.trim() || null,
+      slug: slugify(slug || title) || course.slug,
+      description: description.trim() || null,
+      price_cop: priceNum,
+    }
+    // changing a published course's slug 404s every link already shared
+    if (course.published && payload.slug !== course.slug) {
+      setPendingSave(payload)
+      return
+    }
+    void doSave(payload)
   }
 
   const onCover = async (file: File) => {
@@ -136,7 +161,11 @@ export default function PanelCurso() {
     try {
       const url = await uploadCover(session.user.id, course.id, file)
       await updateCourse(course.id, { cover_url: url })
-      setState({ status: 'ready', course: { ...course, cover_url: url } })
+      setState((prev) =>
+        prev.status === 'ready'
+          ? { status: 'ready', course: { ...prev.course, cover_url: url } }
+          : prev,
+      )
     } catch {
       setError('No se pudo subir la portada.')
     } finally {
@@ -147,10 +176,15 @@ export default function PanelCurso() {
   const togglePublish = async () => {
     setError(null)
     setNotice(null)
+    const next = !course.published
     try {
-      await updateCourse(course.id, { published: !course.published })
-      setState({ status: 'ready', course: { ...course, published: !course.published } })
-      setNotice(course.published ? 'CURSO DESPUBLICADO.' : 'CURSO PUBLICADO EN EL CATÁLOGO.')
+      await updateCourse(course.id, { published: next })
+      setState((prev) =>
+        prev.status === 'ready'
+          ? { status: 'ready', course: { ...prev.course, published: next } }
+          : prev,
+      )
+      setNotice(next ? 'CURSO PUBLICADO EN EL CATÁLOGO.' : 'CURSO DESPUBLICADO.')
     } catch {
       setError('No se pudo cambiar el estado de publicación.')
     }
@@ -160,9 +194,19 @@ export default function PanelCurso() {
     try {
       await deleteCourse(course.id)
       navigate('/panel')
-    } catch {
+    } catch (err) {
       setConfirmDelete(false)
-      setError('No se pudo eliminar el curso.')
+      // 23503: enrollments protect sold courses from deletion by design
+      const fk =
+        err !== null &&
+        typeof err === 'object' &&
+        'code' in err &&
+        (err as { code?: string }).code === '23503'
+      setError(
+        fk
+          ? 'No se puede eliminar: el curso tiene estudiantes inscritos. Puedes despublicarlo para retirarlo del catálogo.'
+          : 'No se pudo eliminar el curso.',
+      )
     }
   }
 
@@ -347,6 +391,18 @@ export default function PanelCurso() {
         confirmLabel="Eliminar"
         onConfirm={() => void onDelete()}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={pendingSave !== null}
+        title="CAMBIAR LA URL DEL CURSO"
+        copy="EL CURSO ESTÁ PUBLICADO: CAMBIAR SU URL ROMPERÁ LOS ENLACES YA COMPARTIDOS. ¿CONTINUAR?"
+        confirmLabel="Cambiar URL"
+        onConfirm={() => {
+          if (pendingSave) void doSave(pendingSave)
+          setPendingSave(null)
+        }}
+        onCancel={() => setPendingSave(null)}
       />
     </div>
   )
