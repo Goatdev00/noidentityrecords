@@ -78,7 +78,7 @@ Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `en
 
 1. ✅ Scaffold + sistema de diseño + layout global + home + /musica
 2. ✅ Supabase: migraciones + RLS + trigger de profiles + buckets
-3. ⬜ Autenticación (Google + email, verificación, reset, guards)
+3. ✅ Autenticación (Google + email, verificación, reset, guards) — falta activar el proveedor Google y el SMTP de Resend (credenciales del usuario)
 4. ⬜ Academia pública (catálogo + landing de curso)
 5. ⬜ Panel del maestro (CRUD + drag & drop)
 6. ⬜ Pagos Bold + inscripciones
