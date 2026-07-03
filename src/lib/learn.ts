@@ -21,6 +21,19 @@ export type LessonContent = {
   links: LessonLink[]
 }
 
+/** Direct, unambiguous enrollment check — enrollments RLS lets a user read
+ *  their own rows. Avoids inferring enrollment from lesson content (which
+ *  breaks when a lesson has no video row yet). */
+export async function isEnrolled(courseId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('enrollments')
+    .select('id')
+    .eq('course_id', courseId)
+    .maybeSingle()
+  if (error) throw error
+  return data !== null
+}
+
 /** Content of a single lesson — only resolves if the caller is enrolled
  *  (RLS on lesson_content). Returns null when not enrolled / not found. */
 export async function fetchLessonContent(lessonId: string): Promise<LessonContent | null> {

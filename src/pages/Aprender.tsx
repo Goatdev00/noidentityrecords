@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
 import LessonPlayer from '../components/learn/LessonPlayer'
@@ -8,6 +8,7 @@ import {
   fetchCompleted,
   fetchLessonContent,
   flattenLessons,
+  isEnrolled,
   markComplete,
   markIncomplete,
   type LearnModule,
@@ -45,6 +46,7 @@ export default function Aprender() {
   const [content, setContent] = useState<LessonContent | null>(null)
   const [contentLoading, setContentLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const titleRef = useRef<HTMLHeadingElement>(null)
 
   // ── load course + temario + enrollment + progress ──
   useEffect(() => {
@@ -59,21 +61,16 @@ export default function Aprender() {
           if (!cancelled) setLoad({ status: 'notfound' })
           return
         }
-        const modules = (await fetchTemario(course.id)) as LearnModule[]
-        const lessons = flattenLessons(modules)
-        // enrollment is proven by being able to read progress OR content;
-        // we check via a progress read (RLS returns rows only if enrolled,
-        // but an empty set is ambiguous) — so probe the first lesson content
-        const done = await fetchCompleted(lessons.map((l) => l.id))
-        let enrolled = done.size > 0
-        if (!enrolled && lessons.length > 0) {
-          const probe = await fetchLessonContent(lessons[0].id)
-          enrolled = probe !== null
-        }
+        // direct enrollment check (not inferred from content, which would
+        // wrongly redirect if the first lesson has no video row yet)
+        const enrolled = await isEnrolled(course.id)
         if (!enrolled) {
           if (!cancelled) setLoad({ status: 'notenrolled', slug })
           return
         }
+        const modules = (await fetchTemario(course.id)) as LearnModule[]
+        const lessons = flattenLessons(modules)
+        const done = await fetchCompleted(lessons.map((l) => l.id))
         if (!cancelled) {
           setCompleted(done)
           setLoad({ status: 'ready', course, modules })
@@ -87,19 +84,46 @@ export default function Aprender() {
     }
   }, [slug, authLoading])
 
+  useEffect(() => {
+    if (load.status === 'ready') {
+      document.title = `${load.course.title} — NO.ID RECORDS`
+    }
+  }, [load])
+
   const lessons = useMemo(
     () => (load.status === 'ready' ? flattenLessons(load.modules) : []),
     [load],
   )
 
-  // current lesson: ?leccion= or first incomplete or first
-  const currentId = useMemo(() => {
-    if (lessons.length === 0) return null
-    const requested = params.get('leccion')
-    if (requested && lessons.some((l) => l.id === requested)) return requested
-    const firstIncomplete = lessons.find((l) => !completed.has(l.id))
-    return (firstIncomplete ?? lessons[0]).id
-  }, [lessons, params, completed])
+  const requestedId = params.get('leccion')
+  const firstIncompleteId = useMemo(() => {
+    const l = lessons.find((x) => !completed.has(x.id))
+    return (l ?? lessons[0])?.id ?? null
+  }, [lessons, completed])
+
+  // pin the resolved lesson into the URL once, so marking a lesson complete
+  // (which changes `completed`) never moves the player out from under the user
+  useEffect(() => {
+    if (load.status !== 'ready' || lessons.length === 0) return
+    if (requestedId && lessons.some((l) => l.id === requestedId)) return
+    if (!firstIncompleteId) return
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('leccion', firstIncompleteId)
+        return next
+      },
+      { replace: true },
+    )
+    // firstIncompleteId is only read for the initial pin; the guard above
+    // stops any re-pin once a valid param exists
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load.status, lessons, requestedId])
+
+  const currentId =
+    requestedId && lessons.some((l) => l.id === requestedId)
+      ? requestedId
+      : firstIncompleteId
 
   const currentIndex = useMemo(
     () => lessons.findIndex((l) => l.id === currentId),
@@ -128,6 +152,11 @@ export default function Aprender() {
     }
   }, [currentId])
 
+  // move focus to the lesson title on change so AT announces the new lesson
+  useEffect(() => {
+    if (!contentLoading && current) titleRef.current?.focus()
+  }, [currentId, contentLoading, current])
+
   const goTo = useCallback(
     (lessonId: string) => {
       setParams((prev) => {
@@ -139,33 +168,29 @@ export default function Aprender() {
     [setParams],
   )
 
-  const setDone = useCallback(
-    async (lessonId: string, done: boolean) => {
-      // optimistic
+  const setDone = useCallback(async (lessonId: string, done: boolean) => {
+    setCompleted((prev) => {
+      const next = new Set(prev)
+      if (done) next.add(lessonId)
+      else next.delete(lessonId)
+      return next
+    })
+    setSaving(true)
+    try {
+      if (done) await markComplete(lessonId)
+      else await markIncomplete(lessonId)
+    } catch {
+      // revert on failure
       setCompleted((prev) => {
         const next = new Set(prev)
-        if (done) next.add(lessonId)
-        else next.delete(lessonId)
+        if (done) next.delete(lessonId)
+        else next.add(lessonId)
         return next
       })
-      setSaving(true)
-      try {
-        if (done) await markComplete(lessonId)
-        else await markIncomplete(lessonId)
-      } catch {
-        // revert on failure
-        setCompleted((prev) => {
-          const next = new Set(prev)
-          if (done) next.delete(lessonId)
-          else next.add(lessonId)
-          return next
-        })
-      } finally {
-        setSaving(false)
-      }
-    },
-    [],
-  )
+    } finally {
+      setSaving(false)
+    }
+  }, [])
 
   if (authLoading || load.status === 'loading') {
     return (
@@ -193,11 +218,14 @@ export default function Aprender() {
   const prev = currentIndex > 0 ? lessons[currentIndex - 1] : null
   const next = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
   const video = parseVideo(content?.video_url)
+  // an incomplete lesson that isn't the one we're already on
+  const continueTarget =
+    firstIncompleteId && firstIncompleteId !== currentId ? firstIncompleteId : null
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-24 pt-8 md:flex-row md:gap-10 md:px-6 md:pt-12">
-      {/* sidebar */}
-      <aside className="flex shrink-0 flex-col gap-6 md:w-72">
+      {/* sidebar — below the player on mobile, left on desktop */}
+      <aside className="order-2 flex shrink-0 flex-col gap-6 md:order-1 md:w-72">
         <div className="flex flex-col gap-3">
           <Link
             to={`/academia/${course.slug}`}
@@ -206,7 +234,14 @@ export default function Aprender() {
             ← {course.title}
           </Link>
           <div className="flex flex-col gap-2">
-            <div className="h-px w-full bg-white/10">
+            <div
+              className="h-px w-full bg-white/10"
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progreso del curso"
+            >
               <div className="h-px bg-accent transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
             <p className="text-[9px] uppercase tracking-[0.3em] text-white/40">
@@ -226,6 +261,7 @@ export default function Aprender() {
                   .sort((a, b) => a.position - b.position)
                   .map((lesson) => {
                     const active = lesson.id === currentId
+                    const lessonDone = completed.has(lesson.id)
                     return (
                       <li key={lesson.id}>
                         <button
@@ -236,8 +272,11 @@ export default function Aprender() {
                             active ? 'text-white' : 'text-white/45 hover:text-white/80'
                           }`}
                         >
-                          <CheckIcon done={completed.has(lesson.id)} />
+                          <CheckIcon done={lessonDone} />
                           <span className="min-w-0 flex-1 truncate">{lesson.title}</span>
+                          <span className="sr-only">
+                            {lessonDone ? '(completada)' : '(pendiente)'}
+                          </span>
                         </button>
                       </li>
                     )
@@ -249,7 +288,7 @@ export default function Aprender() {
       </aside>
 
       {/* main */}
-      <main className="flex min-w-0 flex-1 flex-col gap-8">
+      <main className="order-1 flex min-w-0 flex-1 flex-col gap-8 md:order-2">
         {progress === 100 && (
           <div className="noid-card flex flex-col items-center gap-4 p-8 text-center">
             <p className="noid-label">CURSO COMPLETADO</p>
@@ -275,8 +314,12 @@ export default function Aprender() {
               />
             )}
 
-            <div className="flex flex-col gap-4">
-              <h1 className="noid-title text-lg leading-relaxed text-white md:text-xl">
+            <div aria-live="polite" className="flex flex-col gap-4">
+              <h1
+                ref={titleRef}
+                tabIndex={-1}
+                className="noid-title text-lg leading-relaxed text-white outline-none md:text-xl"
+              >
                 {current.title}
               </h1>
               {current.subtitle && (
@@ -311,18 +354,30 @@ export default function Aprender() {
 
             {/* controls */}
             <div className="flex flex-col gap-6 border-t border-white/5 pt-8">
-              <button
-                type="button"
-                onClick={() => void setDone(current.id, !isDone)}
-                disabled={saving}
-                className={`self-start ${
-                  isDone
-                    ? 'px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-accent transition-colors hover:text-white'
-                    : 'noid-button'
-                } disabled:opacity-40`}
-              >
-                {isDone ? '✓ Completada — desmarcar' : 'Marcar como completada'}
-              </button>
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => void setDone(current.id, !isDone)}
+                  disabled={saving}
+                  aria-pressed={isDone}
+                  className={`${
+                    isDone
+                      ? 'px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-accent transition-colors hover:text-white'
+                      : 'noid-button'
+                  } disabled:opacity-40`}
+                >
+                  {isDone ? '✓ Completada — desmarcar' : 'Marcar como completada'}
+                </button>
+                {continueTarget && (
+                  <button
+                    type="button"
+                    onClick={() => goTo(continueTarget)}
+                    className="px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-white/50 transition-colors hover:text-white"
+                  >
+                    Continuar →
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center justify-between gap-4">
                 {prev ? (
