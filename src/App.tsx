@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import Musica from './pages/Musica'
 import Academia from './pages/Academia'
 import Curso from './pages/Curso'
+import Aprender from './pages/Aprender'
 import Merch from './pages/Merch'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
@@ -72,6 +73,14 @@ export default function App() {
           <Route path="/musica" element={<Musica />} />
           <Route path="/academia" element={<Academia />} />
           <Route path="/academia/:slug" element={<Curso />} />
+          <Route
+            path="/academia/:slug/aprender"
+            element={
+              <RequireAuth>
+                <Aprender />
+              </RequireAuth>
+            }
+          />
           <Route path="/merch" element={<Merch />} />
           <Route path="/login" element={<Login />} />
           <Route path="/restablecer" element={<ResetPassword />} />

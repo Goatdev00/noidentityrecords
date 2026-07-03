@@ -82,7 +82,7 @@ Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `en
 4. ✅ Academia pública (catálogo + landing de curso)
 5. ✅ Panel del maestro (CRUD + drag & drop)
 6. ⬜ Pagos Bold + inscripciones
-7. ⬜ Experiencia de aprendizaje (player, progreso)
+7. ✅ Experiencia de aprendizaje (player, progreso) — falta que el maestro cargue los videos
 8. ⬜ Certificados + emails Resend
 9. ⬜ Merch completa (carrito, checkout, pedidos)
 10. ⬜ CI/CD GitHub Pages + pulido final
