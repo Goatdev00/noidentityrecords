@@ -32,6 +32,9 @@ export default function CartButton() {
           {count > 9 ? '9+' : count}
         </span>
       )}
+      <span className="sr-only" aria-live="polite">
+        {count > 0 ? `${count} artículos en el carrito` : ''}
+      </span>
     </button>
   )
 }

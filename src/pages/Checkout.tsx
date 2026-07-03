@@ -31,32 +31,39 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false)
 
   const variantIds = useMemo(() => items.map((i) => i.variantId), [items])
+  // include quantities so raising a line (via the drawer) also re-validates
+  const cartSignature = items.map((i) => `${i.variantId}:${i.qty}`).join(',')
 
   // keep the cart honest against current stock while on this page
   useEffect(() => {
-    if (variantIds.length === 0) return
+    if (variantIds.length === 0) {
+      setStockError(null)
+      return
+    }
     let cancelled = false
     fetchVariantStock(variantIds)
       .then((stock) => {
         if (cancelled) return
+        const messages: string[] = []
         for (const item of items) {
           const available = stock[item.variantId] ?? 0
           if (available < item.qty) {
-            setStockError(
+            messages.push(
               available <= 0
                 ? `"${item.name}" (talla ${item.size}) se agotó y se quitó del carrito.`
-                : `Solo quedan ${available} de "${item.name}" (talla ${item.size}).`,
+                : `Ajustamos "${item.name}" (talla ${item.size}) a las ${available} disponibles.`,
             )
             setQty(item.variantId, available)
           }
         }
+        setStockError(messages.length > 0 ? messages.join(' ') : null)
       })
       .catch(() => {
         /* leave the cart as-is; the server re-validates at payment time */
       })
-    // re-run only when the set of variants changes
+    // re-run whenever the cart contents OR quantities change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantIds.join(',')])
+  }, [cartSignature])
 
   const set = (k: keyof Shipping) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setShipping((s) => ({ ...s, [k]: e.target.value }))

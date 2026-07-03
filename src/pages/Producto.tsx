@@ -23,6 +23,10 @@ export default function Producto() {
     if (!slug) return
     let cancelled = false
     setState({ status: 'loading' })
+    // router reuses this component across /merch/:slug changes — reset per-product state
+    setActiveImage(0)
+    setAdded(false)
+    setVariant(null)
     fetchProductBySlug(slug)
       .then((product) => {
         if (cancelled) return

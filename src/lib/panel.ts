@@ -141,6 +141,42 @@ export async function renameModule(id: string, title: string): Promise<void> {
   if (error) throw error
 }
 
+export type LessonDraft = {
+  title: string
+  subtitle: string
+  description: string
+  videoUrl: string
+  links: LessonLink[]
+}
+
+/**
+ * Create a module together with all its lessons and their content in one go,
+ * so a teacher can set up a full module without the create-then-edit dance.
+ * Returns the built module for optimistic insertion.
+ */
+export async function createModuleWithLessons(
+  courseId: string,
+  title: string,
+  position: number,
+  drafts: LessonDraft[],
+): Promise<PanelModule> {
+  const mod = await createModule(courseId, title, position)
+  const lessons: PanelLesson[] = []
+  for (let i = 0; i < drafts.length; i++) {
+    const d = drafts[i]
+    const lesson = await createLesson(mod.id, d.title.trim() || 'Lección sin título', i + 1)
+    const subtitle = d.subtitle.trim() || null
+    const description = d.description.trim() || null
+    if (subtitle || description) await updateLesson(lesson.id, { subtitle, description })
+    const links = d.links.filter((l) => l.label.trim() && l.url.trim())
+    if (d.videoUrl.trim() || links.length > 0) {
+      await saveLessonContent(lesson.id, { video_url: d.videoUrl.trim() || null, links })
+    }
+    lessons.push({ ...lesson, subtitle, description })
+  }
+  return { ...mod, lessons }
+}
+
 export async function deleteModule(id: string): Promise<void> {
   const { error } = await supabase.from('modules').delete().eq('id', id)
   if (error) throw error

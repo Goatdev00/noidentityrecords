@@ -1,22 +1,51 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../../lib/cart'
 import { formatCOP } from '../../lib/format'
 
 export default function CartDrawer() {
   const { items, open, setOpen, totalCop, setQty, remove } = useCart()
+  const asideRef = useRef<HTMLElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  // when closed, take the off-screen panel out of the tab order + a11y tree
+  useEffect(() => {
+    const el = asideRef.current
+    if (el) el.inert = !open
+  }, [open])
 
   useEffect(() => {
     if (!open) return
+    const opener = document.activeElement as HTMLElement | null
+    // focus into the panel so keyboard/AT users land inside the modal
+    closeRef.current?.focus()
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        return
+      }
+      if (e.key !== 'Tab' || !asideRef.current) return
+      const f = asideRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      )
+      if (f.length === 0) return
+      const first = f[0]
+      const last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
-    // lock scroll behind the drawer
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      opener?.focus() // restore focus to the trigger on close
     }
   }, [open, setOpen])
 
@@ -35,6 +64,7 @@ export default function CartDrawer() {
 
       {/* panel */}
       <aside
+        ref={asideRef}
         role="dialog"
         aria-modal="true"
         aria-label="Carrito"
@@ -45,6 +75,7 @@ export default function CartDrawer() {
         <header className="flex items-center justify-between border-b border-white/5 px-6 py-5">
           <h2 className="noid-title text-xs text-white">CARRITO</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Cerrar carrito"

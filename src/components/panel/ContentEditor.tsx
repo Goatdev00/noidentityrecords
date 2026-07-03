@@ -21,9 +21,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import ConfirmDialog from '../ConfirmDialog'
 import LessonEditor from './LessonEditor'
+import ModuleEditor from './ModuleEditor'
 import {
   createLesson,
-  createModule,
   deleteLesson,
   deleteModule,
   duplicateLesson,
@@ -198,7 +198,7 @@ export default function ContentEditor({
 }) {
   const [editing, setEditing] = useState<PanelLesson | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
-  const [newModuleTitle, setNewModuleTitle] = useState('')
+  const [showModuleEditor, setShowModuleEditor] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mutating, setMutating] = useState(false)
   const dragSnapshot = useRef<PanelModule[] | null>(null)
@@ -315,15 +315,6 @@ export default function ContentEditor({
     }
   }
 
-  const addModule = () =>
-    guarded(async () => {
-      const title = newModuleTitle.trim()
-      if (!title) return
-      const mod = await createModule(courseId, title, modules.length + 1)
-      setModules((prev) => [...prev, mod])
-      setNewModuleTitle('')
-    }, 'No se pudo crear el módulo.')
-
   const addLesson = (moduleId: string) =>
     guarded(async () => {
       const mod = modules.find((m) => m.id === moduleId)
@@ -374,30 +365,13 @@ export default function ContentEditor({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          value={newModuleTitle}
-          onChange={(e) => setNewModuleTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              void addModule()
-            }
-          }}
-          placeholder="TÍTULO DEL NUEVO MÓDULO"
-          aria-label="Título del nuevo módulo"
-          className="min-w-0 flex-1 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 transition-colors duration-300 focus:border-white/40 focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => void addModule()}
-          disabled={!newModuleTitle.trim() || mutating}
-          className="noid-button disabled:opacity-40"
-        >
-          + Módulo
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowModuleEditor(true)}
+        className="noid-button self-start"
+      >
+        + Nuevo módulo
+      </button>
 
       {error && (
         <p role="alert" className="text-xs tracking-[0.1em] text-accent">
@@ -408,8 +382,8 @@ export default function ContentEditor({
       {modules.length === 0 ? (
         <div className="noid-card flex flex-col items-center gap-4 p-12 text-center">
           <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
-            EL CURSO AÚN NO TIENE CONTENIDO. CREA EL PRIMER MÓDULO Y AGREGA
-            LECCIONES DENTRO.
+            EL CURSO AÚN NO TIENE CONTENIDO. USA "+ NUEVO MÓDULO" PARA CREAR UN
+            MÓDULO CON SUS LECCIONES DE UNA VEZ.
           </p>
         </div>
       ) : (
@@ -482,6 +456,15 @@ export default function ContentEditor({
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {showModuleEditor && (
+        <ModuleEditor
+          courseId={courseId}
+          position={modules.length + 1}
+          onClose={() => setShowModuleEditor(false)}
+          onCreated={(module) => setModules((prev) => [...prev, module])}
+        />
       )}
 
       {editing && (
