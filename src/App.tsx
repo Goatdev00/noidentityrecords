@@ -6,6 +6,7 @@ import { RequireAuth, RequireTeacher } from './components/guards'
 import Home from './pages/Home'
 import Musica from './pages/Musica'
 import Academia from './pages/Academia'
+import Curso from './pages/Curso'
 import Merch from './pages/Merch'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
@@ -39,7 +40,12 @@ function RouteChange() {
   const navType = useNavigationType()
 
   useEffect(() => {
-    document.title = TITLES[pathname] ?? 'Nada aquí — NO.ID RECORDS'
+    // detail pages (e.g. /academia/:slug) refine the title themselves
+    document.title =
+      TITLES[pathname] ??
+      (pathname.startsWith('/academia/')
+        ? 'Academia — NO.ID RECORDS'
+        : 'Nada aquí — NO.ID RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
@@ -62,6 +68,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/musica" element={<Musica />} />
           <Route path="/academia" element={<Academia />} />
+          <Route path="/academia/:slug" element={<Curso />} />
           <Route path="/merch" element={<Merch />} />
           <Route path="/login" element={<Login />} />
           <Route path="/restablecer" element={<ResetPassword />} />
