@@ -10,6 +10,21 @@ function Waiting() {
   )
 }
 
+/** Shown when the profile fetch failed — never strand users on CARGANDO. */
+function ProfileErrorState() {
+  const { refreshProfile } = useAuth()
+  return (
+    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-6 px-6 text-center">
+      <p className="text-xs leading-loose tracking-[0.15em] text-white/40" role="alert">
+        NO PUDIMOS CARGAR TU PERFIL. REVISA TU CONEXIÓN.
+      </p>
+      <button type="button" onClick={() => void refreshProfile()} className="noid-button">
+        Reintentar
+      </button>
+    </div>
+  )
+}
+
 /** /perfil etc.: requires a session; sends you to /login and back. */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -24,14 +39,17 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
 /** /panel: teacher or admin only. Students land back on home. */
 export function RequireTeacher({ children }: { children: ReactNode }) {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, profileError } = useAuth()
   const location = useLocation()
 
-  if (loading || (session && !profile)) return <Waiting />
+  if (loading) return <Waiting />
   if (!session) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
-  if (profile?.role !== 'teacher' && profile?.role !== 'admin') {
+  if (!profile) {
+    return profileError ? <ProfileErrorState /> : <Waiting />
+  }
+  if (profile.role !== 'teacher' && profile.role !== 'admin') {
     return <Navigate to="/" replace />
   }
   return <>{children}</>

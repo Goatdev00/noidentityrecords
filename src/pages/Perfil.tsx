@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -11,15 +11,22 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function Perfil() {
   const { session, profile, refreshProfile } = useAuth()
-  const [name, setName] = useState<string | null>(null)
+  const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // seed the input when the profile (finally) loads or gets refreshed —
+  // a lazy render-time fallback would freeze after the first keystroke and
+  // could wipe the saved name if the user submits before the profile loads
+  useEffect(() => {
+    setName(profile?.display_name ?? '')
+  }, [profile?.display_name])
+
   if (!session) return null // RequireAuth already gates; belt and braces
-  const displayName = name ?? profile?.display_name ?? ''
+  const displayName = name
 
   const saveName = async (e: FormEvent) => {
     e.preventDefault()
@@ -44,8 +51,9 @@ export default function Perfil() {
     setError(null)
     setNotice(null)
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    // path MUST start with the user's uid — storage RLS rejects anything else
-    const path = `${session.user.id}/avatar-${Date.now()}.${ext}`
+    // fixed path under the user's uid (storage RLS rejects anything else):
+    // upsert overwrites instead of piling up orphaned public files
+    const path = `${session.user.id}/avatar.${ext}`
     const { error: upErr } = await supabase.storage
       .from('avatars')
       .upload(path, file, { upsert: true, contentType: file.type })
@@ -55,9 +63,11 @@ export default function Perfil() {
       return
     }
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    // cache-bust: same path, new bytes — browsers would keep the old image
+    const freshUrl = `${data.publicUrl}?v=${Date.now()}`
     const { error: updErr } = await supabase
       .from('profiles')
-      .update({ avatar_url: data.publicUrl })
+      .update({ avatar_url: freshUrl })
       .eq('id', session.user.id)
     setUploading(false)
     if (updErr) setError('No se pudo actualizar el avatar.')
@@ -118,28 +128,33 @@ export default function Perfil() {
         >
           Nombre visible
         </label>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <input
             id="display_name"
             type="text"
             value={displayName}
             onChange={(e) => setName(e.target.value)}
             placeholder="TU NOMBRE"
-            className="flex-1 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 transition-colors duration-300 focus:border-white/40 focus:outline-none"
+            className="min-w-0 flex-1 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 transition-colors duration-300 focus:border-white/40 focus:outline-none"
           />
-          <button type="submit" disabled={saving} className="noid-button disabled:opacity-40">
+          <button
+            type="submit"
+            disabled={saving || !profile}
+            className="noid-button disabled:opacity-40"
+          >
             Guardar
           </button>
         </div>
         {error && (
           <p role="alert" className="text-xs tracking-[0.1em] text-accent">{error}</p>
         )}
-        {notice && (
-          <p role="status" className="text-[10px] tracking-[0.3em] text-white/50">{notice}</p>
-        )}
+        {/* always mounted so screen readers announce the swap */}
+        <p role="status" className="text-[10px] tracking-[0.3em] text-white/50">
+          {notice ?? ''}
+        </p>
       </form>
 
-      <section aria-label="Mis cursos" className="flex flex-col gap-6">
+      <section id="cursos" aria-label="Mis cursos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS CURSOS</h2>
         <div className="noid-card flex flex-col items-center gap-4 p-10 text-center">
           <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
@@ -154,7 +169,7 @@ export default function Perfil() {
         </div>
       </section>
 
-      <section aria-label="Mis pedidos" className="flex flex-col gap-6">
+      <section id="pedidos" aria-label="Mis pedidos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS PEDIDOS</h2>
         <div className="noid-card flex flex-col items-center gap-4 p-10 text-center">
           <p className="text-xs leading-loose tracking-[0.15em] text-white/40">

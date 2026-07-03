@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { translateAuthError, useAuth } from '../lib/auth'
@@ -20,6 +20,7 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [settled, setSettled] = useState(false)
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // give supabase-js a beat to consume the token from the URL
   useEffect(() => {
@@ -28,6 +29,13 @@ export default function ResetPassword() {
       return () => clearTimeout(t)
     }
   }, [loading])
+
+  // don't let the post-success redirect fire if the user navigated away
+  useEffect(() => {
+    return () => {
+      if (redirectTimer.current) clearTimeout(redirectTimer.current)
+    }
+  }, [])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -43,7 +51,10 @@ export default function ResetPassword() {
       setError(translateAuthError(err.message))
     } else {
       setDone(true)
-      setTimeout(() => navigate('/perfil', { replace: true }), 1500)
+      redirectTimer.current = setTimeout(
+        () => navigate('/perfil', { replace: true }),
+        1500,
+      )
     }
   }
 
@@ -80,7 +91,7 @@ export default function ResetPassword() {
       </h1>
 
       {done ? (
-        <p role="status" className="text-xs leading-loose tracking-[0.15em] text-white/60">
+        <p role="alert" className="text-xs leading-loose tracking-[0.15em] text-white/60">
           CONTRASEÑA ACTUALIZADA. ENTRANDO…
         </p>
       ) : (

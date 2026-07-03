@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 
 function PersonIcon() {
@@ -20,15 +20,22 @@ function PersonIcon() {
 }
 
 /**
- * The header's person slot: link to /login without a session, avatar with
- * dropdown menu (perfil / cursos / pedidos / panel for teachers / salir)
- * with one.
+ * The header's person slot: link to /login without a session, avatar with a
+ * dropdown with one. Exposed as a simple disclosure (button + nav of links) —
+ * honest semantics without pretending to be an ARIA menu.
  */
 export default function UserMenu() {
   const { session, profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  // close when the route changes underneath (e.g. browser back/forward)
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     if (!open) return
@@ -36,7 +43,10 @@ export default function UserMenu() {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
     }
     document.addEventListener('mousedown', onDocClick)
     document.addEventListener('keydown', onKey)
@@ -69,10 +79,11 @@ export default function UserMenu() {
   return (
     <div ref={rootRef} className="relative justify-self-end md:order-3">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls="user-menu-panel"
         aria-label="Menú de usuario"
         className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/15 transition-colors duration-300 hover:border-white/50"
       >
@@ -84,27 +95,27 @@ export default function UserMenu() {
       </button>
 
       {open && (
-        <div
-          role="menu"
+        <nav
+          id="user-menu-panel"
+          aria-label="Opciones de usuario"
           className="absolute right-0 top-full z-50 mt-3 w-52 border border-white/10 bg-black/95 py-2 backdrop-blur-md"
         >
-          <Link role="menuitem" to="/perfil" onClick={() => setOpen(false)} className={itemClass}>
+          <Link to="/perfil" onClick={() => setOpen(false)} className={itemClass}>
             Mi perfil
           </Link>
-          <Link role="menuitem" to="/perfil#cursos" onClick={() => setOpen(false)} className={itemClass}>
+          <Link to="/perfil#cursos" onClick={() => setOpen(false)} className={itemClass}>
             Mis cursos
           </Link>
-          <Link role="menuitem" to="/perfil#pedidos" onClick={() => setOpen(false)} className={itemClass}>
+          <Link to="/perfil#pedidos" onClick={() => setOpen(false)} className={itemClass}>
             Mis pedidos
           </Link>
           {isTeacher && (
-            <Link role="menuitem" to="/panel" onClick={() => setOpen(false)} className={itemClass}>
+            <Link to="/panel" onClick={() => setOpen(false)} className={itemClass}>
               Panel de maestro
             </Link>
           )}
           <div aria-hidden="true" className="mx-5 my-2 h-px bg-white/10" />
           <button
-            role="menuitem"
             type="button"
             className={itemClass}
             onClick={async () => {
@@ -115,7 +126,7 @@ export default function UserMenu() {
           >
             Cerrar sesión
           </button>
-        </div>
+        </nav>
       )}
     </div>
   )

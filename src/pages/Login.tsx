@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { translateAuthError, useAuth } from '../lib/auth'
@@ -23,7 +23,7 @@ const inputClass =
   'w-full border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 focus:border-white/40 focus:outline-none transition-colors duration-300'
 
 export default function Login() {
-  const { session, loading } = useAuth()
+  const { session, loading, redirectError, clearRedirectError } = useAuth()
   const location = useLocation()
   const [params] = useSearchParams()
 
@@ -33,9 +33,23 @@ export default function Login() {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // the confirmation link redirect carries failures in the URL hash
+  // (consumed by AuthProvider) — never show the success notice over one
   const [notice, setNotice] = useState<string | null>(
-    params.get('verified') ? 'CORREO CONFIRMADO. YA PUEDES ENTRAR.' : null,
+    params.get('verified') && !redirectError
+      ? 'CORREO CONFIRMADO. YA PUEDES ENTRAR.'
+      : null,
   )
+
+  // returning here via browser Back from the Google consent screen restores
+  // the page from bfcache with busy still true — unstick the form
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setBusy(false)
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
 
   const from = (location.state as { from?: string } | null)?.from ?? '/perfil'
 
@@ -59,6 +73,7 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setNotice(null)
+    clearRedirectError()
     setBusy(true)
     try {
       if (mode === 'signin') {
@@ -152,16 +167,15 @@ export default function Login() {
           />
         )}
 
-        {error && (
+        {(error || redirectError) && (
           <p role="alert" className="text-xs leading-relaxed tracking-[0.1em] text-accent">
-            {error}
+            {error ?? redirectError}
           </p>
         )}
-        {notice && (
-          <p role="status" className="text-xs leading-loose tracking-[0.15em] text-white/60">
-            {notice}
-          </p>
-        )}
+        {/* always mounted so screen readers announce the swap */}
+        <p role="status" className="text-xs leading-loose tracking-[0.15em] text-white/60">
+          {notice ?? ''}
+        </p>
 
         <button type="submit" disabled={busy} className="noid-button w-full disabled:opacity-40">
           {mode === 'signin' ? 'Entrar' : mode === 'signup' ? 'Crear cuenta' : 'Enviar enlace'}

@@ -35,16 +35,20 @@ const TITLES: Record<string, string> = {
  * the view change.
  */
 function RouteChange() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const navType = useNavigationType()
 
   useEffect(() => {
     document.title = TITLES[pathname] ?? 'Nada aquí — NO.ID RECORDS'
-    if (navType !== 'POP') {
-      window.scrollTo(0, 0)
-      document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true })
+    if (navType === 'POP') return
+    if (hash) {
+      // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
+      document.getElementById(hash.slice(1))?.scrollIntoView()
+      return
     }
-  }, [pathname, navType])
+    window.scrollTo(0, 0)
+    document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true })
+  }, [pathname, hash, navType])
 
   return null
 }

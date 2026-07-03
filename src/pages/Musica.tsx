@@ -31,7 +31,14 @@ export default function Musica() {
       .order('position')
       .then(({ data, error }) => {
         if (!cancelled && !error && data && data.length > 0) {
-          setEmbeds(data as MediaEmbed[])
+          // dashboard-created rows may have NULL meta/height — normalize
+          setEmbeds(
+            data.map((r) => ({
+              ...r,
+              meta: r.meta ?? '',
+              height: r.height ?? (r.platform === 'bandcamp' ? 654 : 280),
+            })) as MediaEmbed[],
+          )
         }
       })
     return () => {
