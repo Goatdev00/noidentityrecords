@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+
+# build
+dist
+dist-ssr
+
+# env — secrets never enter the repo
+.env
+.env.local
+.env.*.local
+
+# editor/os
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.local
+Thumbs.db
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# supabase local dev
+supabase/.temp
+supabase/.branches

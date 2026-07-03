@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No.ID ACADEMY & PODCAST SESSIONS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Encapsulamos todo en un ID para no afectar el resto de la web */
+        #noid-plugin-wrapper {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0;
+            position: relative;
+            isolation: isolate;
+        }
+
+        @font-face {
+            font-family: 'Horizon';
+            src: local('Horizon'), local('Horizon-Bold');
+            font-weight: bold;
+        }
+
+        #noid-plugin-wrapper .horizon-font {
+            font-family: 'Horizon', 'Syncopate', sans-serif;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        /* Luz de seguimiento solo activa dentro del wrapper */
+        #cursor-light {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: screen;
+            will-change: transform;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        #noid-plugin-wrapper .float-animation {
+            animation: floating 4s ease-in-out infinite;
+        }
+
+        /* Carrusel de Merch */
+        @keyframes scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-400px * 5)); }
+        }
+
+        #noid-plugin-wrapper .merch-track {
+            display: flex;
+            width: calc(400px * 10);
+            animation: scroll 30s linear infinite;
+            cursor: grab;
+            user-select: none;
+            will-change: transform;
+            outline: none;
+        }
+
+        #noid-plugin-wrapper .merch-track.paused {
+            animation-play-state: paused !important;
+        }
+
+        #noid-plugin-wrapper .merch-item {
+            width: 400px;
+            padding: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Selectores específicos para no afectar otros iframes del sitio */
+        #noid-plugin-wrapper .noid-audio-container {
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s ease;
+        }
+
+        #noid-plugin-wrapper .noid-audio-container:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        #noid-plugin-wrapper .noid-audio-container iframe {
+            outline: none !important;
+            border: none !important;
+            display: block;
+        }
+
+        /* Sección Academia */
+        #noid-plugin-wrapper .academy-container {
+            position: relative;
+            width: 100%;
+            min-height: 450px;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+            border-radius: 4px;
+            text-decoration: none;
+            background: #000;
+        }
+
+        #noid-plugin-wrapper .academy-bg {
+            position: absolute;
+            inset: 0; 
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            filter: brightness(0.4);
+            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.8s ease;
+        }
+
+        #noid-plugin-wrapper .academy-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background: linear-gradient(to top, #000 0%, rgba(0,0,0,0.7) 35%, transparent 100%);
+            pointer-events: none;
+        }
+
+        #noid-plugin-wrapper .academy-content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            padding: 3rem 2.5rem;
+        }
+
+        #noid-plugin-wrapper .academy-dot {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        #noid-plugin-wrapper .academy-container:hover .academy-dot {
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        #noid-plugin-wrapper .text-shadow-strong {
+            text-shadow: 0 4px 15px rgba(0,0,0,1);
+        }
+
+        #noid-plugin-wrapper .catalog-link {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        #noid-plugin-wrapper .catalog-link:hover {
+            border-bottom-color: rgba(255,255,255,1);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="noid-plugin-wrapper" class="flex flex-col items-center px-6 pb-20">
+        <!-- Luz y Fondo dentro del wrapper -->
+        <div id="cursor-light"></div>
+        <div class="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,#1a1a1a_0%,#000_100%)] -z-10 opacity-50"></div>
+
+        <!-- HEADER - Margen reducido para no chocar con el menú principal -->
+        <header class="mb-16 mt-12 text-center w-full">
+            <img src="https://noidentityrecords.com/wp-content/uploads/2025/02/LOGO_NOID.png" 
+                alt="No.ID Logo" 
+                style="height: 100px !important; width: auto !important;"
+                class="object-contain mx-auto transition-transform hover:scale-105 duration-700">
+        </header>
+
+        <!-- ACADEMIA -->
+        <section class="w-full max-w-5xl mb-32 mx-auto">
+            <h3 class="horizon-font text-[20px] opacity-40 mb-10 tracking-[0.8em] text-left pl-2">ACADEMIA</h3>
+            
+            <a href="https://noidentityrecords.com/clases/" class="academy-container group">
+                <img src="https://noidentityrecords.com/wp-content/uploads/2026/01/EL-MAMU-Diseno-academia.jpg" 
+                    alt="Workshop EL MAMU" 
+                    class="academy-bg">
+                <div class="academy-overlay"></div>
+                
+                <div class="academy-content flex flex-col md:flex-row md:items-end justify-between gap-8">
+                    <div class="flex items-start">
+                        <span class="academy-dot mt-4"></span>
+                        <div class="float-animation text-left">
+                            <p class="text-[12px] opacity-70 uppercase tracking-widest mb-4 font-bold">Workshop Disponible</p>
+                            <h2 class="horizon-font text-2xl md:text-4xl leading-tight max-w-3xl text-shadow-strong">
+                                TÉCNICAS DE PRODUCCIÓN DE TECHNO HIPNÓTICO <span class="opacity-60 italic text-xl md:text-2xl block md:inline">x EL MAMU</span>
+                            </h2>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col justify-end text-left md:text-right">
+                        <p class="font-light text-3xl md:text-5xl tracking-widest">80.000 COP</p>
+                        <p class="text-[10px] opacity-50 tracking-[0.3em] uppercase mt-2">Acceso Permanente</p>
+                    </div>
+                </div>
+            </a>
+        </section>
+
+        <!-- MERCH -->
+        <section class="w-full mb-32 overflow-hidden mx-auto">
+            <div class="max-w-5xl mx-auto w-full mb-10">
+                <h3 class="horizon-font text-[20px] opacity-40 tracking-[0.8em] text-left pl-2">MERCH</h3>
+            </div>
+            
+            <div class="relative w-full">
+                <div class="merch-track" id="merch-track">
+                    <!-- Items -->
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-221.png" alt="Merch 1"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-222.png" alt="Merch 2"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-223.png" alt="Merch 3"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/flor-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-219.png" alt="Merch 4"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/flor-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-220.png" alt="Merch 5"></div>
+                    <!-- Clones -->
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-221.png" alt="Merch 1"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-222.png" alt="Merch 2"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/mundo-deformado-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-223.png" alt="Merch 3"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/flor-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-219.png" alt="Merch 4"></div>
+                    <div class="merch-item"><img src="https://noidentityrecords.com/wp-content/uploads/2026/01/flor-No.id-podctas-techno-bogota-tehcno-colombia-techno-eventos-techno-festival-220.png" alt="Merch 5"></div>
+                </div>
+                <div class="absolute inset-y-0 left-0 w-16 md:w-40 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none"></div>
+                <div class="absolute inset-y-0 right-0 w-16 md:w-40 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none"></div>
+            </div>
+            
+            <div class="mt-12 text-center">
+                <a href="https://noidentityrecords.com/merch/" class="horizon-font text-[14px] opacity-40 tracking-[0.6em] catalog-link">Ver Catálogo de Merch</a>
+            </div>
+        </section>
+
+        <!-- BANDCAMP -->
+        <section class="w-full max-w-5xl mb-32 mx-auto">
+            <h3 class="horizon-font text-[20px] opacity-40 mb-10 tracking-[0.8em] text-left pl-2">BANDCAMP</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+                <div class="noid-audio-container">
+                    <iframe style="width: 100%; height: 654px;" src="https://bandcamp.com/EmbeddedPlayer/album=2333324377/size=large/bgcol=333333/linkcol=9a64ff/transparent=true/" loading="lazy"></iframe>
+                </div>
+                <div class="noid-audio-container">
+                    <iframe style="width: 100%; height: 786px;" src="https://bandcamp.com/EmbeddedPlayer/album=1905391289/size=large/bgcol=333333/linkcol=9a64ff/transparent=true/" seamless></iframe>
+                </div>
+                <div class="noid-audio-container">
+                    <iframe style="width: 100%; height: 555px;" src="https://bandcamp.com/EmbeddedPlayer/album=1742511145/size=large/bgcol=333333/linkcol=9a64ff/transparent=true/" loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <!-- SOUNDCLOUD -->
+        <section class="w-full max-w-5xl mb-40 mx-auto">
+            <h3 class="horizon-font text-[20px] opacity-40 mb-10 tracking-[0.8em] text-left pl-2">SOUNDCLOUD</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="noid-audio-container group">
+                    <div class="px-5 py-3 bg-white/5 flex justify-between items-center group-hover:bg-white/10 transition-colors">
+                        <span class="horizon-font text-[14px] opacity-60">Specials 001</span>
+                        <span class="text-[12px] opacity-30 font-bold tracking-widest">I-AM</span>
+                    </div>
+                    <iframe width="100%" height="280" scrolling="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A2238731435&color=%23171616&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe>
+                </div>
+                <div class="noid-audio-container group">
+                    <div class="px-5 py-3 bg-white/5 flex justify-between items-center group-hover:bg-white/10 transition-colors">
+                        <span class="horizon-font text-[14px] opacity-60">Collection</span>
+                        <span class="text-[12px] opacity-30 font-bold tracking-widest">VA II</span>
+                    </div>
+                    <iframe width="100%" height="280" scrolling="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/soundcloud%253Aplaylists%253A2108674447&color=%23171616&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe>
+                </div>
+                <div class="noid-audio-container group">
+                    <div class="px-5 py-3 bg-white/5 flex justify-between items-center group-hover:bg-white/10 transition-colors">
+                        <span class="horizon-font text-[14px] opacity-60">Specials 002</span>
+                        <span class="text-[12px] opacity-30 font-bold tracking-widest">L0L4 Hartz</span>
+                    </div>
+                    <iframe width="100%" height="280" scrolling="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A2237925419&color=%23171616&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="mt-auto mb-16 text-center w-full max-w-5xl mx-auto">
+            <div class="flex flex-wrap justify-center gap-10 md:gap-20 text-[10px] uppercase tracking-[0.5em] opacity-40">
+                <a href="https://www.instagram.com/noid.col/" target="_blank" class="hover:opacity-100 hover:text-white transition-all">Instagram</a>
+                <a href="https://soundcloud.com/noidcol" target="_blank" class="hover:opacity-100 hover:text-white transition-all">Soundcloud</a>
+                <a href="https://noidrecords.bandcamp.com/" target="_blank" class="hover:opacity-100 hover:text-white transition-all">Bandcamp</a>
+                <a href="https://fr.ra.co/promoters/142608" target="_blank" class="hover:opacity-100 hover:text-white transition-all">Resident Advisor</a>
+            </div>
+            <div class="w-20 h-px bg-white/10 mx-auto my-12"></div>
+            <p class="text-[9px] opacity-20 tracking-[0.4em]">© 2026 NO.IDENTITY. THE VOID IS CALLING.</p>
+        </footer>
+    </div>
+
+    <script>
+        const wrapper = document.getElementById('noid-plugin-wrapper');
+        const light = document.getElementById('cursor-light');
+        let mouseX = 0, mouseY = 0, currentX = 0, currentY = 0;
+
+        wrapper.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (light.style.opacity === '0') light.style.opacity = '1';
+        });
+
+        function animateLight() {
+            currentX += (mouseX - currentX) * 0.15;
+            currentY += (mouseY - currentY) * 0.15;
+            light.style.transform = `translate(${currentX - 100}px, ${currentY - 100}px)`;
+            requestAnimationFrame(animateLight);
+        }
+        animateLight();
+
+        wrapper.addEventListener('mouseleave', () => light.style.opacity = '0');
+        wrapper.addEventListener('mouseenter', () => light.style.opacity = '1');
+
+        const track = document.getElementById('merch-track');
+        let isDragging = false, startX, currentScroll, startTime;
+
+        const handleDragStart = (x) => {
+            isDragging = true;
+            track.classList.add('paused');
+            startX = x;
+            const style = window.getComputedStyle(track);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            currentScroll = matrix.m41;
+            startTime = Date.now();
+        };
+
+        track.addEventListener('mousedown', (e) => {
+            handleDragStart(e.pageX);
+            e.preventDefault();
+        });
+
+        track.addEventListener('touchstart', (e) => {
+            handleDragStart(e.touches[0].pageX);
+        });
+
+        const handleDragMove = (x) => {
+            if (!isDragging) return;
+            const walk = (x - startX);
+            let offset = currentScroll + walk;
+            const resetPoint = 400 * 5;
+            if (offset > 0) offset = -resetPoint;
+            if (offset < -resetPoint) offset = 0;
+            track.style.animation = 'none';
+            track.style.transform = `translateX(${offset}px)`;
+        };
+
+        window.addEventListener('mousemove', (e) => handleDragMove(e.pageX));
+        window.addEventListener('touchmove', (e) => handleDragMove(e.touches[0].pageX), { passive: false });
+
+        const handleDragEnd = (endX) => {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const duration = Date.now() - startTime;
+            const dist = Math.abs(endX - startX);
+
+            if (dist < 10 && duration < 200) {
+                window.location.href = "https://noidentityrecords.com/merch/";
+            } else {
+                const style = window.getComputedStyle(track);
+                const matrix = new WebKitCSSMatrix(style.transform);
+                const currentPos = matrix.m41;
+                const cycleWidth = 400 * 5; 
+                const animTime = 30;
+                const normalizedX = ((-currentPos % cycleWidth) + cycleWidth) % cycleWidth;
+                const delay = (normalizedX / cycleWidth) * animTime;
+
+                track.style.animation = 'none';
+                void track.offsetWidth; 
+                track.style.transform = '';
+                track.style.animation = '';
+                track.style.animationDelay = `-${delay}s`;
+                track.classList.remove('paused');
+            }
+        };
+
+        window.addEventListener('mouseup', (e) => handleDragEnd(e.pageX));
+        window.addEventListener('touchend', (e) => handleDragEnd(e.changedTouches[0].pageX));
+        track.addEventListener('dragstart', (e) => e.preventDefault());
+    </script>
+</body>
+</html>

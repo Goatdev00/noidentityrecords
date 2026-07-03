@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   NO.ID DESIGN TOKENS
+   Extracted from the original site spec (reference/pagina-original.html).
+   Hierarchy lives in opacity, not color. When in doubt, remove.
+------------------------------------------------------------------- */
+@theme {
+  /* color */
+  --color-void: #000000;
+  --color-void-core: #1a1a1a;
+  --color-accent: #9a64ff;
+
+  /* type — Horizon local-first with Syncopate fallback, as in the original */
+  --font-body: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Horizon", "Syncopate", ui-sans-serif, system-ui, sans-serif;
+
+  /* letter-spacing: titles ~0.15em, section labels 0.6–0.8em */
+  --tracking-title: 0.15em;
+  --tracking-label: 0.7em;
+  --tracking-label-tight: 0.5em;
+
+  /* motion */
+  --ease-noid: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-float: float 4s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-15px);
+    }
+  }
+}
+
+/* local Horizon if installed, exactly like the original page */
+@font-face {
+  font-family: "Horizon";
+  src: local("Horizon"), local("Horizon-Bold");
+  font-weight: bold;
+}
+
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    scrollbar-color: rgba(255, 255, 255, 0.2) #000;
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: #ffffff;
+    font-family: var(--font-body);
+    font-weight: 300;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* pure black + subtle fixed radial gradient, exact original:
+     radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000 100%) at 50% opacity */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(
+      circle at 50% 50%,
+      var(--color-void-core) 0%,
+      var(--color-void) 100%
+    );
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: #000;
+  }
+
+  /* visible keyboard focus on every interactive element */
+  :focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* display type: Syncopate, uppercase, wide air */
+  .noid-title {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-title);
+    font-weight: 700;
+  }
+
+  /* section label — original: horizon-font text-[20px] opacity-40 tracking-[0.8em];
+     scaled down below md so it survives a 380px viewport */
+  .noid-label {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-weight: 400;
+    font-size: 0.875rem;
+    letter-spacing: var(--tracking-label-tight);
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  @media (min-width: 768px) {
+    .noid-label {
+      font-size: 1.25rem;
+      letter-spacing: 0.8em;
+    }
+  }
+
+  /* card — original noid-audio-container: black bg, 4px radius, hairline
+     border that lights up, -5px lift, deep shadow */
+  .noid-card {
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition:
+      border-color 0.4s var(--ease-noid),
+      transform 0.4s var(--ease-noid),
+      box-shadow 0.4s var(--ease-noid);
+  }
+
+  .noid-card:hover,
+  .noid-card:focus-within {
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .noid-card:hover,
+    .noid-card:focus-within {
+      transform: none;
+    }
+  }
+
+  /* sober button — hairline border, fills white on hover */
+  .noid-button {
+    display: inline-block;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: 0.6875rem;
+    padding: 1rem 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transition:
+      background-color 0.6s var(--ease-noid),
+      color 0.6s var(--ease-noid),
+      border-color 0.6s var(--ease-noid);
+  }
+
+  .noid-button:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+  }
+}
