@@ -48,10 +48,36 @@ Tokens en `src/index.css` (`@theme` de Tailwind 4 → CSS variables):
 - Transiciones `cubic-bezier(0.16, 1, 0.3, 1)`. Acento `#9a64ff` solo en detalles.
 - Luz que sigue el cursor (200px, `mix-blend-mode: screen`) — solo desktop, respeta `prefers-reduced-motion`.
 
+## Base de datos (Supabase)
+
+Migraciones en `supabase/migrations/` (aplicadas en orden):
+
+| Archivo | Contenido |
+|---|---|
+| `…120000_initial_schema.sql` | 14 tablas, funciones helper (`is_admin`, `is_teacher_or_admin`), trigger `on_auth_user_created` (crea `profiles` con role `student`), índices |
+| `…120100_rls_policies.sql` | RLS activado en TODAS las tablas + políticas comentadas + grants por columna en `profiles` + RPC `verify_certificate(code)` |
+| `…120200_storage_buckets.sql` | Buckets `course-covers`/`merch-images`/`avatars` (públicos) y `certificates` (privado, solo URLs firmadas) + políticas de subida por carpeta `{uid}/` |
+| `…120300_seed_media_embeds.sql` | Seed idempotente de `media_embeds` (solo si la tabla está vacía) |
+
+**Modelo de seguridad:** el frontend solo tiene la anon key; las tablas de dinero/acceso (`payments`, `enrollments`, `orders`, `order_items`, `certificates`) **no tienen políticas de escritura** — solo las Edge Functions (service role) escriben en ellas, y además los privilegios INSERT/UPDATE/DELETE están revocados para `anon`/`authenticated`. `lesson_content` vive separada de `lessons` y solo es legible con enrollment (o siendo el maestro dueño/admin). El rol de un perfil no es editable por el cliente (grant por columnas). La verificación pública de certificados pasa por la RPC `verify_certificate`, nunca abriendo la tabla.
+
+**Cómo aplicar** (elige una):
+- Dashboard → SQL Editor → pegar cada archivo en orden.
+- Management API (lo que se usó): `POST https://api.supabase.com/v1/projects/{ref}/database/query` con un access token.
+- CLI: `supabase link --project-ref ztzgnorjnffpgytnwnvy && supabase db push`.
+
+**Probar RLS desde afuera** (usa solo la anon key pública):
+
+```bash
+node scripts/test-rls.mjs
+```
+
+Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `enrollments`, ni ver `payments`/`orders`/`certificates`, y que sí puede leer los `media_embeds` activos.
+
 ## Fases
 
 1. ✅ Scaffold + sistema de diseño + layout global + home + /musica
-2. ⬜ Supabase: migraciones + RLS + trigger de profiles + buckets
+2. ✅ Supabase: migraciones + RLS + trigger de profiles + buckets
 3. ⬜ Autenticación (Google + email, verificación, reset, guards)
 4. ⬜ Academia pública (catálogo + landing de curso)
 5. ⬜ Panel del maestro (CRUD + drag & drop)
