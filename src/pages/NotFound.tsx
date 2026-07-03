@@ -5,7 +5,7 @@ export default function NotFound() {
     <EmptyState
       label="404"
       title="AQUÍ NO HAY NADA"
-      copy="LA PÁGINA QUE BUSCAS NO EXISTE. EL VACÍO ES REAL."
+      copy="LA PÁGINA QUE BUSCAS NO EXISTE."
     />
   )
 }

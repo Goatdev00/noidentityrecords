@@ -14,7 +14,6 @@ export const NAV_ITEMS = [
 export const BRAND = {
   name: 'NO.ID RECORDS',
   shortName: 'NO.ID',
-  tagline: 'THE VOID IS CALLING',
-  copyright: '© 2026 NO.IDENTITY. THE VOID IS CALLING.',
+  copyright: '© 2026 NO.IDENTITY.',
   city: 'BOGOTÁ',
 } as const

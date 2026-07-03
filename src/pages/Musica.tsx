@@ -59,9 +59,6 @@ export default function Musica() {
         <h1 className="noid-title text-xl leading-relaxed text-white md:text-3xl">
           MÚSICA
         </h1>
-        <p className="text-[10px] uppercase tracking-[0.3em] text-white/50">
-          Escucha el vacío
-        </p>
       </header>
 
       {bandcamp.length > 0 && (

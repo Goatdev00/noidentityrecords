@@ -14,7 +14,7 @@ const SECTIONS = [
   },
   {
     label: 'MÚSICA',
-    copy: 'LANZAMIENTOS Y SESIONES. ESCUCHA EL VACÍO.',
+    copy: 'LANZAMIENTOS Y SESIONES.',
     to: '/musica',
   },
 ] as const
@@ -38,7 +38,7 @@ export default function Home() {
           </p>
         </div>
         <p className="max-w-md text-sm leading-loose tracking-[0.15em] text-white/50">
-          SELLO Y COLECTIVO. {BRAND.tagline}.
+          SELLO Y COLECTIVO.
         </p>
       </section>
 

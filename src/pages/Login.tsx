@@ -6,7 +6,7 @@ import { translateAuthError, useAuth } from '../lib/auth'
 type Mode = 'signin' | 'signup' | 'forgot'
 
 const TITLES: Record<Mode, string> = {
-  signin: 'IDENTIFÍCATE EN EL VACÍO',
+  signin: 'IDENTIFÍCATE',
   signup: 'CREA TU CUENTA',
   forgot: 'RECUPERA TU ACCESO',
 }

@@ -18,7 +18,7 @@ import Contacto from './pages/Contacto'
 import NotFound from './pages/NotFound'
 
 const TITLES: Record<string, string> = {
-  '/': 'NO.ID RECORDS — THE VOID IS CALLING',
+  '/': 'NO.ID RECORDS',
   '/musica': 'Música — NO.ID RECORDS',
   '/academia': 'Academia — NO.ID RECORDS',
   '/merch': 'Merch — NO.ID RECORDS',
