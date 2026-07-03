@@ -41,7 +41,7 @@ export default function Footer() {
             <Link
               key={l.to}
               to={l.to}
-              className="font-display text-[10px] uppercase tracking-[0.35em] text-white/40 transition-colors duration-300 hover:text-white"
+              className="font-display text-[10px] uppercase tracking-[0.5em] text-white/40 transition-colors duration-300 hover:text-white"
             >
               {l.label}
             </Link>

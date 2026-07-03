@@ -8,8 +8,9 @@ export default function Layout() {
     <div className="flex min-h-dvh flex-col">
       <CursorLight />
       <Header />
-      {/* header is fixed: pt clears its two-row mobile height / one-row desktop height */}
-      <main className="flex-1 pt-28 md:pt-24">
+      {/* header is fixed: pt clears its two-row mobile height / one-row desktop height.
+          tabIndex -1 lets RouteChange move focus here on navigation */}
+      <main tabIndex={-1} className="flex-1 pt-28 outline-none md:pt-24">
         <Outlet />
       </main>
       <Footer />

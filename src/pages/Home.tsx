@@ -53,7 +53,7 @@ export default function Home() {
             to={s.to}
             className="noid-card group flex flex-col gap-8 p-10"
           >
-            <span className="font-display text-xs uppercase tracking-[0.5em] text-white/40 transition-colors duration-500 group-hover:text-white">
+            <span className="font-display text-xs uppercase tracking-[0.6em] text-white/40 transition-colors duration-500 group-hover:text-white">
               {s.label}
             </span>
             <span className="text-xs leading-loose tracking-[0.15em] text-white/30 transition-colors duration-500 group-hover:text-white/60">

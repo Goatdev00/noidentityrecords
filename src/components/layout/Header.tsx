@@ -47,7 +47,7 @@ export default function Header() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `font-display text-[10px] uppercase tracking-[0.35em] transition-colors duration-300 md:text-[11px] ${
+                `font-display text-[10px] uppercase tracking-[0.5em] transition-colors duration-300 md:text-[11px] md:tracking-[0.6em] ${
                   isActive ? 'text-white' : 'text-white/40 hover:text-white'
                 }`
               }

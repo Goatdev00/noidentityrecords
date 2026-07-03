@@ -40,6 +40,11 @@ export default function CursorLight() {
       visible = true
       el.style.opacity = '1'
     }
+    // cross-origin iframes (bandcamp/soundcloud players) swallow mouse events,
+    // so the light would freeze at the entry point; hide it while inside
+    const onOut = (e: MouseEvent) => {
+      if (e.relatedTarget instanceof HTMLIFrameElement) onLeave()
+    }
 
     const tick = () => {
       x += (tx - x) * 0.15
@@ -49,6 +54,8 @@ export default function CursorLight() {
     }
 
     window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseout', onOut)
+    window.addEventListener('blur', onLeave)
     document.documentElement.addEventListener('mouseleave', onLeave)
     document.documentElement.addEventListener('mouseenter', onEnter)
     raf = requestAnimationFrame(tick)
@@ -56,6 +63,8 @@ export default function CursorLight() {
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseout', onOut)
+      window.removeEventListener('blur', onLeave)
       document.documentElement.removeEventListener('mouseleave', onLeave)
       document.documentElement.removeEventListener('mouseenter', onEnter)
     }
