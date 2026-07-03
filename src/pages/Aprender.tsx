@@ -15,6 +15,7 @@ import {
   type LessonContent,
 } from '../lib/learn'
 import { parseVideo } from '../lib/video'
+import { issueCertificate } from '../lib/certificates'
 
 type Load =
   | { status: 'loading' }
@@ -46,6 +47,8 @@ export default function Aprender() {
   const [content, setContent] = useState<LessonContent | null>(null)
   const [contentLoading, setContentLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [certBusy, setCertBusy] = useState(false)
+  const [certError, setCertError] = useState<string | null>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
 
   // ── load course + temario + enrollment + progress ──
@@ -290,11 +293,35 @@ export default function Aprender() {
       {/* main */}
       <main className="order-1 flex min-w-0 flex-1 flex-col gap-8 md:order-2">
         {progress === 100 && (
-          <div className="noid-card flex flex-col items-center gap-4 p-8 text-center">
+          <div className="noid-card flex flex-col items-center gap-5 p-8 text-center">
             <p className="noid-label">CURSO COMPLETADO</p>
             <p className="text-xs leading-loose tracking-[0.15em] text-white/50">
-              TERMINASTE TODAS LAS LECCIONES. TU CERTIFICADO ESTARÁ DISPONIBLE MUY PRONTO.
+              TERMINASTE TODAS LAS LECCIONES. GENERA TU CERTIFICADO Y RECÍBELO EN TU CORREO.
             </p>
+            <button
+              type="button"
+              disabled={certBusy}
+              onClick={async () => {
+                setCertBusy(true)
+                setCertError(null)
+                try {
+                  const { signed_url } = await issueCertificate(course.id)
+                  if (signed_url) window.open(signed_url, '_blank', 'noopener')
+                } catch (e) {
+                  setCertError(e instanceof Error ? e.message : 'No se pudo generar el certificado.')
+                } finally {
+                  setCertBusy(false)
+                }
+              }}
+              className="noid-button disabled:opacity-40"
+            >
+              {certBusy ? 'Generando…' : 'Generar mi certificado'}
+            </button>
+            {certError && (
+              <p role="alert" className="text-xs tracking-[0.1em] text-accent">
+                {certError}
+              </p>
+            )}
           </div>
         )}
 

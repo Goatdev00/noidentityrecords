@@ -83,7 +83,7 @@ Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `en
 5. ✅ Panel del maestro (CRUD + drag & drop)
 6. ⬜ Pagos Bold + inscripciones
 7. ✅ Experiencia de aprendizaje (player, progreso) — falta que el maestro cargue los videos
-8. ⬜ Certificados + emails Resend
+8. ✅ Certificados + emails Resend (Edge Function + PDF + /verificar)
 9. ⬜ Merch completa (carrito, checkout, pedidos)
 10. ⬜ CI/CD GitHub Pages + pulido final
 

@@ -2,6 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import {
+  fetchMyCertificates,
+  issueCertificate,
+  type MyCertificate,
+} from '../lib/certificates'
 
 const ROLE_LABEL: Record<string, string> = {
   student: 'ESTUDIANTE',
@@ -16,7 +21,37 @@ export default function Perfil() {
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [certificates, setCertificates] = useState<MyCertificate[]>([])
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchMyCertificates()
+      .then((c) => {
+        if (!cancelled) setCertificates(c)
+      })
+      .catch(() => {
+        /* certificates section just stays empty */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const downloadCertificate = async (cert: MyCertificate) => {
+    setDownloadingId(cert.id)
+    setError(null)
+    try {
+      const { signed_url } = await issueCertificate(cert.course_id)
+      if (signed_url) window.open(signed_url, '_blank', 'noopener')
+      else setError('No se pudo obtener el certificado.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo obtener el certificado.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   // seed the input when the profile (finally) loads or gets refreshed —
   // a lazy render-time fallback would freeze after the first keystroke and
@@ -168,6 +203,46 @@ export default function Perfil() {
           </Link>
         </div>
       </section>
+
+      {certificates.length > 0 && (
+        <section
+          id="certificados"
+          aria-label="Mis certificados"
+          className="flex scroll-mt-28 flex-col gap-6"
+        >
+          <h2 className="noid-label">MIS CERTIFICADOS</h2>
+          <ul className="flex flex-col gap-4">
+            {certificates.map((cert) => (
+              <li
+                key={cert.id}
+                className="noid-card flex flex-wrap items-center justify-between gap-4 px-6 py-5"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xs tracking-[0.1em] text-white">
+                    {cert.course?.title ?? 'Curso'}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.25em] text-white/30">
+                    {new Date(cert.issued_at).toLocaleDateString('es-CO', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}{' '}
+                    · {cert.code}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void downloadCertificate(cert)}
+                  disabled={downloadingId === cert.id}
+                  className="shrink-0 text-[10px] uppercase tracking-[0.3em] text-accent transition-opacity hover:opacity-70 disabled:opacity-40"
+                >
+                  {downloadingId === cert.id ? 'Generando…' : 'Descargar ↓'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section id="pedidos" aria-label="Mis pedidos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS PEDIDOS</h2>

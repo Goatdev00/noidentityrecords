@@ -14,6 +14,7 @@ import ResetPassword from './pages/ResetPassword'
 import Perfil from './pages/Perfil'
 import Panel from './pages/Panel'
 import PanelCurso from './pages/PanelCurso'
+import Verificar from './pages/Verificar'
 import Terminos from './pages/Terminos'
 import Contacto from './pages/Contacto'
 import NotFound from './pages/NotFound'
@@ -49,7 +50,9 @@ function RouteChange() {
         ? 'Academia — NO.ID RECORDS'
         : pathname.startsWith('/panel/')
           ? 'Panel de maestro — NO.ID RECORDS'
-          : 'Nada aquí — NO.ID RECORDS')
+          : pathname.startsWith('/verificar/')
+            ? 'Verificar certificado — NO.ID RECORDS'
+            : 'Nada aquí — NO.ID RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
@@ -108,6 +111,7 @@ export default function App() {
               </RequireTeacher>
             }
           />
+          <Route path="/verificar/:code" element={<Verificar />} />
           <Route path="/terminos" element={<Terminos />} />
           <Route path="/contacto" element={<Contacto />} />
           <Route path="*" element={<NotFound />} />
