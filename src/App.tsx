@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
 import Perfil from './pages/Perfil'
 import Panel from './pages/Panel'
+import PanelCurso from './pages/PanelCurso'
 import Terminos from './pages/Terminos'
 import Contacto from './pages/Contacto'
 import NotFound from './pages/NotFound'
@@ -45,7 +46,9 @@ function RouteChange() {
       TITLES[pathname] ??
       (pathname.startsWith('/academia/')
         ? 'Academia — NO.ID RECORDS'
-        : 'Nada aquí — NO.ID RECORDS')
+        : pathname.startsWith('/panel/')
+          ? 'Panel de maestro — NO.ID RECORDS'
+          : 'Nada aquí — NO.ID RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
@@ -85,6 +88,14 @@ export default function App() {
             element={
               <RequireTeacher>
                 <Panel />
+              </RequireTeacher>
+            }
+          />
+          <Route
+            path="/panel/curso/:id"
+            element={
+              <RequireTeacher>
+                <PanelCurso />
               </RequireTeacher>
             }
           />

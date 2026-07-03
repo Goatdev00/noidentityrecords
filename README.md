@@ -80,7 +80,7 @@ Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `en
 2. ✅ Supabase: migraciones + RLS + trigger de profiles + buckets
 3. ✅ Autenticación (Google + email, verificación, reset, guards) — Google OAuth activo; falta el SMTP de Resend (API key pendiente)
 4. ✅ Academia pública (catálogo + landing de curso)
-5. ⬜ Panel del maestro (CRUD + drag & drop)
+5. ✅ Panel del maestro (CRUD + drag & drop)
 6. ⬜ Pagos Bold + inscripciones
 7. ⬜ Experiencia de aprendizaje (player, progreso)
 8. ⬜ Certificados + emails Resend
