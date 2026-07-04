@@ -60,7 +60,7 @@ export default function UserMenu() {
     return (
       <Link
         to="/login"
-        className="p-1 text-white/60 transition-colors duration-300 hover:text-white"
+        className="flex h-10 w-10 items-center justify-center text-white/60 transition-colors duration-300 hover:text-white"
         aria-label="Iniciar sesión"
       >
         <PersonIcon />

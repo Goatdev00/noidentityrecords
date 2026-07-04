@@ -24,7 +24,7 @@ export default function CartButton() {
       type="button"
       onClick={() => setOpen(true)}
       aria-label={`Abrir carrito${count > 0 ? ` (${count})` : ''}`}
-      className="relative p-1 text-white/60 transition-colors duration-300 hover:text-white"
+      className="relative flex h-10 w-10 items-center justify-center text-white/60 transition-colors duration-300 hover:text-white"
     >
       <BagIcon />
       {count > 0 && (

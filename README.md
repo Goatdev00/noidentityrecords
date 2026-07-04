@@ -78,13 +78,13 @@ Verifica que un cliente anónimo no puede leer `lesson_content`, ni insertar `en
 
 1. ✅ Scaffold + sistema de diseño + layout global + home + /musica
 2. ✅ Supabase: migraciones + RLS + trigger de profiles + buckets
-3. ✅ Autenticación (Google + email, verificación, reset, guards) — Google OAuth activo; falta el SMTP de Resend (API key pendiente)
+3. ✅ Autenticación (Google + email, verificación, reset, guards) — Google OAuth y SMTP de Resend activos
 4. ✅ Academia pública (catálogo + landing de curso)
-5. ✅ Panel del maestro (CRUD + drag & drop)
-6. ⬜ Pagos Bold + inscripciones
-7. ✅ Experiencia de aprendizaje (player, progreso) — falta que el maestro cargue los videos
-8. ✅ Certificados + emails Resend (Edge Function + PDF + /verificar)
-9. ⬜ Merch completa (carrito, checkout, pedidos)
-10. ⬜ CI/CD GitHub Pages + pulido final
+5. ✅ Panel del maestro (CRUD + drag & drop + crear módulo con lecciones de una vez)
+6. ⬜ Pagos Bold + inscripciones — **pendiente de las llaves de Bold del usuario**
+7. ✅ Experiencia de aprendizaje (player, progreso, certificado al 100%)
+8. ✅ Certificados + emails Resend (Edge Function + PDF + /verificar/:code)
+9. ✅ Merch (catálogo, detalle, carrito, checkout) — el pago se conecta en la fase 6
+10. ✅ CI/CD GitHub Pages + pulido (responsive, accesibilidad, error boundary)
 
 > **Nota sobre video:** YouTube no permite forzar la calidad de reproducción desde el embed (la elige el reproductor según la conexión del usuario). Vimeo y Bunny sí lo permiten. Los videos de las lecciones siempre van por link externo; esta plataforma no aloja video.
