@@ -16,7 +16,7 @@ export default function EmptyState({ label, title, copy, children }: Props) {
       <h1 className="noid-title text-lg leading-relaxed text-white md:text-2xl">
         {title}
       </h1>
-      <p className="max-w-md text-xs leading-loose tracking-[0.15em] text-white/40">
+      <p className="max-w-md text-xs leading-loose tracking-[0.15em] text-white/60">
         {copy}
       </p>
       {children ?? (

@@ -7,6 +7,7 @@ import {
   issueCertificate,
   type MyCertificate,
 } from '../lib/certificates'
+import { fetchMyEnrollments, type EnrolledCourse } from '../lib/academia'
 
 const ROLE_LABEL: Record<string, string> = {
   student: 'ESTUDIANTE',
@@ -22,6 +23,7 @@ export default function Perfil() {
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [certificates, setCertificates] = useState<MyCertificate[]>([])
+  const [courses, setCourses] = useState<EnrolledCourse[] | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -33,6 +35,13 @@ export default function Perfil() {
       })
       .catch(() => {
         /* certificates section just stays empty */
+      })
+    fetchMyEnrollments()
+      .then((c) => {
+        if (!cancelled) setCourses(c)
+      })
+      .catch(() => {
+        if (!cancelled) setCourses([])
       })
     return () => {
       cancelled = true
@@ -121,7 +130,7 @@ export default function Perfil() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-16 px-6 pb-28 pt-12 md:pt-20">
       <header className="flex flex-col items-center gap-6 text-center">
-        <p className="noid-label">PERFIL</p>
+        <h1 className="noid-label">PERFIL</h1>
 
         <button
           type="button"
@@ -158,7 +167,9 @@ export default function Perfil() {
         />
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs tracking-[0.15em] text-white/40">{session.user.email}</p>
+          <p className="max-w-full break-all text-xs tracking-[0.15em] text-white/60">
+            {session.user.email}
+          </p>
           <p className="text-[9px] uppercase tracking-[0.4em] text-white/30">
             {ROLE_LABEL[profile?.role ?? 'student']}
           </p>
@@ -200,17 +211,70 @@ export default function Perfil() {
 
       <section id="cursos" aria-label="Mis cursos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS CURSOS</h2>
-        <div className="noid-card flex flex-col items-center gap-4 p-10 text-center">
-          <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
-            AÚN NO ESTÁS INSCRITO EN NINGÚN CURSO.
-          </p>
-          <Link
-            to="/academia"
-            className="text-[10px] uppercase tracking-[0.3em] text-white/60 transition-colors hover:text-white"
-          >
-            Explorar la academia →
-          </Link>
-        </div>
+        {courses === null ? (
+          <div className="noid-card flex min-h-[120px] items-center justify-center" role="status">
+            <p className="noid-label animate-pulse">CARGANDO</p>
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="noid-card flex flex-col items-center gap-4 p-10 text-center">
+            <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
+              AÚN NO ESTÁS INSCRITO EN NINGÚN CURSO.
+            </p>
+            <Link
+              to="/academia"
+              className="text-[10px] uppercase tracking-[0.3em] text-white/60 transition-colors hover:text-white"
+            >
+              Explorar la academia →
+            </Link>
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-4">
+            {courses.map((c) => (
+              <li key={c.courseId}>
+                <Link
+                  to={`/academia/${c.slug}/aprender`}
+                  className="noid-card flex items-center gap-4 px-6 py-5"
+                >
+                  <div className="h-14 w-14 shrink-0 overflow-hidden border border-white/10 bg-white/[0.02]">
+                    {c.coverUrl ? (
+                      <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <img src="/logo-noid-wordmark.png" alt="" className="w-8 opacity-20" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <p className="truncate text-[11px] uppercase tracking-[0.15em] text-white">
+                      {c.title}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-px flex-1 bg-white/10"
+                        role="progressbar"
+                        aria-valuenow={c.progress}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`Progreso de ${c.title}`}
+                      >
+                        <div
+                          className="h-px bg-accent transition-all duration-700"
+                          style={{ width: `${c.progress}%` }}
+                        />
+                      </div>
+                      <span className="shrink-0 text-[9px] uppercase tracking-[0.25em] text-white/50">
+                        {c.progress}%
+                      </span>
+                    </div>
+                  </div>
+                  <span aria-hidden="true" className="shrink-0 text-white/30">
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {certificates.length > 0 && (
@@ -256,7 +320,7 @@ export default function Perfil() {
       <section id="pedidos" aria-label="Mis pedidos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS PEDIDOS</h2>
         <div className="noid-card flex flex-col items-center gap-4 p-10 text-center">
-          <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
+          <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
             SIN PEDIDOS TODAVÍA.
           </p>
           <Link

@@ -89,7 +89,7 @@ export default function Panel() {
       )}
 
       {state.status === 'error' && (
-        <p role="alert" className="text-xs leading-loose tracking-[0.15em] text-white/40">
+        <p role="alert" className="text-xs leading-loose tracking-[0.15em] text-white/60">
           NO PUDIMOS CARGAR TUS CURSOS. RECARGA LA PÁGINA.
         </p>
       )}
@@ -97,7 +97,7 @@ export default function Panel() {
       {state.status === 'ready' &&
         (state.courses.length === 0 ? (
           <div className="noid-card flex flex-col items-center gap-4 p-12 text-center">
-            <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
+            <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
               AÚN NO TIENES CURSOS. CREA EL PRIMERO ARRIBA: SOLO NECESITAS UN
               TÍTULO PARA EMPEZAR.
             </p>

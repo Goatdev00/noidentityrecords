@@ -41,6 +41,7 @@ export default function Curso() {
   const { session, loading: authLoading } = useAuth()
   const [state, setState] = useState<State>({ status: 'loading' })
   const [enrollment, setEnrollment] = useState<EnrollmentStatus | null>(null)
+  const [enrollmentError, setEnrollmentError] = useState(false)
   const [buyNotice, setBuyNotice] = useState(false)
 
   useEffect(() => {
@@ -76,15 +77,22 @@ export default function Curso() {
     if (state.status !== 'ready' || authLoading) return
     if (!session) {
       setEnrollment(null)
+      setEnrollmentError(false)
       return
     }
     let cancelled = false
+    setEnrollmentError(false)
     fetchEnrollmentStatus(state.course.id, lessonIds)
       .then((e) => {
         if (!cancelled) setEnrollment(e)
       })
       .catch(() => {
-        if (!cancelled) setEnrollment(null)
+        // distinguish "couldn't verify" from "not enrolled" so we don't
+        // wrongly show "Comprar" to someone who already owns the course
+        if (!cancelled) {
+          setEnrollment(null)
+          setEnrollmentError(true)
+        }
       })
     return () => {
       cancelled = true
@@ -202,11 +210,15 @@ export default function Curso() {
                     style={{ width: `${enrollment?.progress ?? 0}%` }}
                   />
                 </div>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-white/40">
+                <p className="text-[9px] uppercase tracking-[0.3em] text-white/60">
                   {enrollment?.progress ?? 0}% completado
                 </p>
               </div>
             </>
+          ) : session && enrollmentError ? (
+            <p role="alert" className="text-[10px] uppercase tracking-[0.25em] text-white/60">
+              No pudimos verificar tu acceso. Recarga la página.
+            </p>
           ) : session ? (
             <>
               <button
@@ -216,7 +228,7 @@ export default function Curso() {
               >
                 Comprar curso
               </button>
-              <p role="status" className="text-[9px] uppercase tracking-[0.3em] text-white/40">
+              <p role="status" className="text-[9px] uppercase tracking-[0.3em] text-white/60">
                 {buyNotice ? 'LOS PAGOS SE HABILITAN MUY PRONTO.' : ''}
               </p>
             </>
@@ -229,7 +241,7 @@ export default function Curso() {
               >
                 Comprar curso
               </Link>
-              <p className="text-[9px] uppercase tracking-[0.3em] text-white/40">
+              <p className="text-[9px] uppercase tracking-[0.3em] text-white/60">
                 NECESITAS UNA CUENTA PARA COMPRAR
               </p>
             </>
@@ -249,7 +261,7 @@ export default function Curso() {
       <section aria-label="Temario" className="flex flex-col gap-10">
         <h2 className="noid-label pl-2">TEMARIO</h2>
         {temario.length === 0 ? (
-          <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
+          <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
             EL TEMARIO SE PUBLICARÁ PRONTO.
           </p>
         ) : (

@@ -7,7 +7,7 @@ import { formatCOP } from '../lib/format'
 
 const inputClass =
   'w-full min-w-0 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 focus:border-white/40 focus:outline-none transition-colors duration-300'
-const labelClass = 'text-[10px] uppercase tracking-[0.3em] text-white/40'
+const labelClass = 'text-[10px] uppercase tracking-[0.3em] text-white/60'
 
 type Shipping = {
   name: string
@@ -84,7 +84,7 @@ export default function Checkout() {
         <h1 className="noid-title text-base leading-relaxed text-white">
           INICIA SESIÓN PARA COMPRAR
         </h1>
-        <p className="text-xs leading-loose tracking-[0.15em] text-white/40">
+        <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
           NECESITAS UNA CUENTA PARA COMPLETAR TU PEDIDO. TU CARRITO SE MANTIENE.
         </p>
         <Link to="/login" state={{ from: '/checkout' }} className="noid-button">
@@ -145,7 +145,7 @@ export default function Checkout() {
           <button type="submit" disabled={!complete || submitting} className="noid-button self-start disabled:opacity-40">
             Ir a pagar
           </button>
-          <p className="text-[10px] uppercase leading-relaxed tracking-[0.25em] text-white/40">
+          <p className="text-[10px] uppercase leading-relaxed tracking-[0.25em] text-white/60">
             El pago con Bold se habilita muy pronto. Tus datos y tu carrito ya
             están listos para el checkout.
           </p>

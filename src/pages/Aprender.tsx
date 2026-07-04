@@ -46,6 +46,8 @@ export default function Aprender() {
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [content, setContent] = useState<LessonContent | null>(null)
   const [contentLoading, setContentLoading] = useState(false)
+  const [contentError, setContentError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [certBusy, setCertBusy] = useState(false)
   const [certError, setCertError] = useState<string | null>(null)
@@ -140,12 +142,14 @@ export default function Aprender() {
     let cancelled = false
     setContentLoading(true)
     setContent(null)
+    setContentError(false)
     fetchLessonContent(currentId)
       .then((c) => {
         if (!cancelled) setContent(c)
       })
       .catch(() => {
-        if (!cancelled) setContent(null)
+        // a fetch failure is NOT the same as "no video set yet"
+        if (!cancelled) setContentError(true)
       })
       .finally(() => {
         if (!cancelled) setContentLoading(false)
@@ -153,7 +157,7 @@ export default function Aprender() {
     return () => {
       cancelled = true
     }
-  }, [currentId])
+  }, [currentId, retryKey])
 
   // move focus to the lesson title on change so AT announces the new lesson
   useEffect(() => {
@@ -338,6 +342,19 @@ export default function Aprender() {
             {contentLoading ? (
               <div className="flex aspect-video w-full items-center justify-center bg-black" role="status">
                 <p className="noid-label animate-pulse">CARGANDO</p>
+              </div>
+            ) : contentError ? (
+              <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 border border-white/10 bg-black text-center">
+                <p role="alert" className="px-6 text-xs leading-loose tracking-[0.15em] text-white/60">
+                  NO PUDIMOS CARGAR ESTA LECCIÓN.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setRetryKey((k) => k + 1)}
+                  className="text-[10px] uppercase tracking-[0.3em] text-accent transition-opacity hover:opacity-70"
+                >
+                  Reintentar
+                </button>
               </div>
             ) : (
               <LessonPlayer

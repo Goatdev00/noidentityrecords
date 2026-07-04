@@ -48,7 +48,7 @@ export default function Terminos() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-12 px-6 pb-28 pt-12 md:pt-20">
       <header className="flex flex-col gap-4">
-        <p className="noid-label">TÉRMINOS Y CONDICIONES</p>
+        <h1 className="noid-label">TÉRMINOS Y CONDICIONES</h1>
         <p className="text-[10px] uppercase tracking-[0.3em] text-white/30">
           Última actualización: julio de 2026
         </p>

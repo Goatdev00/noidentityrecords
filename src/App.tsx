@@ -52,11 +52,13 @@ function RouteChange() {
       TITLES[pathname] ??
       (pathname.startsWith('/academia/')
         ? 'Academia — NO.ID RECORDS'
-        : pathname.startsWith('/panel/')
-          ? 'Panel de maestro — NO.ID RECORDS'
-          : pathname.startsWith('/verificar/')
-            ? 'Verificar certificado — NO.ID RECORDS'
-            : 'Nada aquí — NO.ID RECORDS')
+        : pathname.startsWith('/merch/')
+          ? 'Merch — NO.ID RECORDS'
+          : pathname.startsWith('/panel/')
+            ? 'Panel de maestro — NO.ID RECORDS'
+            : pathname.startsWith('/verificar/')
+              ? 'Verificar certificado — NO.ID RECORDS'
+              : 'Nada aquí — NO.ID RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top

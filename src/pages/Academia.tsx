@@ -55,7 +55,7 @@ export default function Academia() {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 pb-28 pt-12 md:pt-20">
-      <h1 className="noid-label pl-2">ACADEMIA</h1>
+      <h1 className="noid-label pl-2 text-white/70">ACADEMIA</h1>
       <div className="flex flex-col gap-8">
         {state.courses.map((c) => (
           <CourseCard key={c.id} course={c} />

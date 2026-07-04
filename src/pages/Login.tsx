@@ -184,17 +184,17 @@ export default function Login() {
 
       <div className="flex flex-col gap-3 text-[10px] uppercase tracking-[0.25em]">
         {mode !== 'signin' && (
-          <button type="button" onClick={() => { setMode('signin'); setError(null) }} className="text-white/40 transition-colors hover:text-white">
+          <button type="button" onClick={() => { setMode('signin'); setError(null) }} className="text-white/60 transition-colors hover:text-white">
             Ya tengo cuenta — entrar
           </button>
         )}
         {mode !== 'signup' && (
-          <button type="button" onClick={() => { setMode('signup'); setError(null) }} className="text-white/40 transition-colors hover:text-white">
+          <button type="button" onClick={() => { setMode('signup'); setError(null) }} className="text-white/60 transition-colors hover:text-white">
             No tengo cuenta — crearla
           </button>
         )}
         {mode !== 'forgot' && (
-          <button type="button" onClick={() => { setMode('forgot'); setError(null) }} className="text-white/40 transition-colors hover:text-white">
+          <button type="button" onClick={() => { setMode('forgot'); setError(null) }} className="text-white/60 transition-colors hover:text-white">
             Olvidé mi contraseña
           </button>
         )}

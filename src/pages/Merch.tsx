@@ -56,7 +56,7 @@ export default function Merch() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 pb-28 pt-12 md:px-8 md:pt-20">
-      <h1 className="noid-label pl-1">MERCH</h1>
+      <h1 className="noid-label pl-1 text-white/70">MERCH</h1>
       <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
         {state.products.map((p) => (
           <Link key={p.id} to={`/merch/${p.slug}`} className="noid-card group flex flex-col">
