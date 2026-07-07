@@ -12,6 +12,7 @@ export type CourseSummary = {
   subtitle: string | null
   price_cop: number
   cover_url: string | null
+  teacher_id: string
   teacher: CourseTeacher | null
 }
 
@@ -34,7 +35,7 @@ export type ModuleWithLessons = {
 }
 
 const COURSE_COLUMNS =
-  'id, slug, title, subtitle, price_cop, cover_url, teacher:profiles!courses_teacher_id_fkey(display_name, avatar_url)'
+  'id, slug, title, subtitle, price_cop, cover_url, teacher_id, teacher:profiles!courses_teacher_id_fkey(display_name, avatar_url)'
 
 /** Published courses for the public catalog (RLS already filters drafts). */
 export async function fetchPublishedCourses(): Promise<CourseSummary[]> {

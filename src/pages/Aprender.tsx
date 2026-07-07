@@ -22,7 +22,7 @@ type Load =
   | { status: 'error' }
   | { status: 'notfound' }
   | { status: 'notenrolled'; slug: string }
-  | { status: 'ready'; course: CourseDetail; modules: LearnModule[] }
+  | { status: 'ready'; course: CourseDetail; modules: LearnModule[]; preview: boolean }
 
 function CheckIcon({ done }: { done: boolean }) {
   return (
@@ -39,7 +39,7 @@ function CheckIcon({ done }: { done: boolean }) {
 
 export default function Aprender() {
   const { slug } = useParams<{ slug: string }>()
-  const { session, loading: authLoading } = useAuth()
+  const { session, profile, loading: authLoading } = useAuth()
   const [params, setParams] = useSearchParams()
 
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -68,17 +68,23 @@ export default function Aprender() {
         }
         // direct enrollment check (not inferred from content, which would
         // wrongly redirect if the first lesson has no video row yet)
-        const enrolled = await isEnrolled(course.id)
-        if (!enrolled) {
+        const enrolledFlag = await isEnrolled(course.id)
+        // the course owner (and admin) can always see their own content —
+        // RLS already allows it — so they skip the enrollment gate
+        const owner =
+          course.teacher_id === session?.user.id || profile?.role === 'admin'
+        if (!enrolledFlag && !owner) {
           if (!cancelled) setLoad({ status: 'notenrolled', slug })
           return
         }
+        // owner/admin viewing without a real enrollment = preview (no progress)
+        const preview = owner && !enrolledFlag
         const modules = (await fetchTemario(course.id)) as LearnModule[]
         const lessons = flattenLessons(modules)
-        const done = await fetchCompleted(lessons.map((l) => l.id))
+        const done = preview ? new Set<string>() : await fetchCompleted(lessons.map((l) => l.id))
         if (!cancelled) {
           setCompleted(done)
-          setLoad({ status: 'ready', course, modules })
+          setLoad({ status: 'ready', course, modules, preview })
         }
       } catch {
         if (!cancelled) setLoad({ status: 'error' })
@@ -87,7 +93,8 @@ export default function Aprender() {
     return () => {
       cancelled = true
     }
-  }, [slug, authLoading])
+    // re-evaluate access once the profile (admin role) / session resolve
+  }, [slug, authLoading, session?.user.id, profile?.role])
 
   useEffect(() => {
     if (load.status === 'ready') {
@@ -217,7 +224,7 @@ export default function Aprender() {
     return <Navigate to={`/academia/${load.slug}`} replace />
   }
 
-  const { course, modules } = load
+  const { course, modules, preview } = load
   const total = lessons.length
   const doneCount = lessons.filter((l) => completed.has(l.id)).length
   const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0
@@ -240,21 +247,27 @@ export default function Aprender() {
           >
             ← {course.title}
           </Link>
-          <div className="flex flex-col gap-2">
-            <div
-              className="h-px w-full bg-white/10"
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progreso del curso"
-            >
-              <div className="h-px bg-accent transition-all duration-700" style={{ width: `${progress}%` }} />
-            </div>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-white/40">
-              {progress}% · {doneCount}/{total} lecciones
+          {preview ? (
+            <p className="text-[9px] uppercase tracking-[0.3em] text-accent">
+              Vista de maestro
             </p>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div
+                className="h-px w-full bg-white/10"
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Progreso del curso"
+              >
+                <div className="h-px bg-accent transition-all duration-700" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-white/60">
+                {progress}% · {doneCount}/{total} lecciones
+              </p>
+            </div>
+          )}
         </div>
 
         <nav aria-label="Temario" className="flex flex-col gap-6">
@@ -296,7 +309,15 @@ export default function Aprender() {
 
       {/* main */}
       <main className="order-1 flex min-w-0 flex-1 flex-col gap-8 md:order-2">
-        {progress === 100 && (
+        {preview && (
+          <div className="noid-card flex flex-col items-center gap-2 p-5 text-center">
+            <p className="noid-label text-accent">VISTA DE MAESTRO</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">
+              Estás previsualizando tu curso. Aquí el progreso no se guarda.
+            </p>
+          </div>
+        )}
+        {progress === 100 && !preview && (
           <div className="noid-card flex flex-col items-center gap-5 p-8 text-center">
             <p className="noid-label">CURSO COMPLETADO</p>
             <p className="text-xs leading-loose tracking-[0.15em] text-white/50">
@@ -361,7 +382,7 @@ export default function Aprender() {
                 video={video}
                 lessonId={current.id}
                 onEnded={() => {
-                  if (!completed.has(current.id)) void setDone(current.id, true)
+                  if (!preview && !completed.has(current.id)) void setDone(current.id, true)
                 }}
               />
             )}
@@ -407,19 +428,21 @@ export default function Aprender() {
             {/* controls */}
             <div className="flex flex-col gap-6 border-t border-white/5 pt-8">
               <div className="flex flex-wrap items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => void setDone(current.id, !isDone)}
-                  disabled={saving}
-                  aria-pressed={isDone}
-                  className={`${
-                    isDone
-                      ? 'px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-accent transition-colors hover:text-white'
-                      : 'noid-button'
-                  } disabled:opacity-40`}
-                >
-                  {isDone ? '✓ Completada — desmarcar' : 'Marcar como completada'}
-                </button>
+                {!preview && (
+                  <button
+                    type="button"
+                    onClick={() => void setDone(current.id, !isDone)}
+                    disabled={saving}
+                    aria-pressed={isDone}
+                    className={`${
+                      isDone
+                        ? 'px-6 py-4 font-display text-[11px] uppercase tracking-[0.3em] text-accent transition-colors hover:text-white'
+                        : 'noid-button'
+                    } disabled:opacity-40`}
+                  >
+                    {isDone ? '✓ Completada — desmarcar' : 'Marcar como completada'}
+                  </button>
+                )}
                 {continueTarget && (
                   <button
                     type="button"

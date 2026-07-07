@@ -38,7 +38,7 @@ type State =
 
 export default function Curso() {
   const { slug } = useParams<{ slug: string }>()
-  const { session, loading: authLoading } = useAuth()
+  const { session, profile, loading: authLoading } = useAuth()
   const [state, setState] = useState<State>({ status: 'loading' })
   const [enrollment, setEnrollment] = useState<EnrollmentStatus | null>(null)
   const [enrollmentError, setEnrollmentError] = useState(false)
@@ -135,6 +135,10 @@ export default function Curso() {
 
   const { course, temario } = state
   const enrolled = enrollment?.enrolled ?? false
+  // the owner (and admin) can always view their own content, even in the
+  // student preview — so the temario is unlocked and they can enter the course
+  const isOwner = course.teacher_id === session?.user.id || profile?.role === 'admin'
+  const canView = enrolled || isOwner
   const lessonCount = lessonIds.length
 
   return (
@@ -198,7 +202,16 @@ export default function Curso() {
         </div>
 
         <div className="flex flex-col items-start gap-3 md:items-end">
-          {enrolled ? (
+          {isOwner && !enrolled ? (
+            <>
+              <Link to={`/academia/${course.slug}/aprender`} className="noid-button">
+                Entrar al curso
+              </Link>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-white/60">
+                Vista de maestro · contenido desbloqueado
+              </p>
+            </>
+          ) : enrolled ? (
             <>
               <Link to={`/academia/${course.slug}/aprender`} className="noid-button">
                 Continuar
@@ -298,7 +311,7 @@ export default function Curso() {
                             </p>
                           )}
                         </div>
-                        {!enrolled && (
+                        {!canView && (
                           <span className="text-white/25" title="Contenido bloqueado">
                             <LockIcon />
                             <span className="sr-only">Contenido bloqueado</span>
