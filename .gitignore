@@ -26,3 +26,11 @@ npm-debug.log*
 # supabase local dev
 supabase/.temp
 supabase/.branches
+
+# private data / source assets — NEVER commit (public repo)
+*.xlsx
+DATOS_LIMPIOS.xlsx
+Merch/
+Flyer*.png
+reference/LOGO_NOID.png
+_*.mjs
