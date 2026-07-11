@@ -34,3 +34,6 @@ Merch/
 Flyer*.png
 reference/LOGO_NOID.png
 _*.mjs
+
+# vite temp files
+vite.config.ts.timestamp-*.mjs
