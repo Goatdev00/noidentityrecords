@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import EmptyState from '../components/EmptyState'
+import EventFlyerBackdrop from '../components/EventFlyerBackdrop'
 import { fetchUpcomingEvents, splitDate, type EventRow } from '../lib/events'
 
 type State =
@@ -61,8 +62,9 @@ export default function Eventos() {
           const { day, month, year } = splitDate(event.event_date)
           return (
             <li key={event.id}>
-              <div className="noid-card flex flex-col gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-6 md:gap-10">
+              <div className="noid-card group relative flex flex-col gap-6 overflow-hidden p-8 sm:flex-row sm:items-center sm:justify-between">
+                {event.image_url && <EventFlyerBackdrop src={event.image_url} />}
+                <div className="relative z-10 flex items-center gap-6 md:gap-10">
                   <div className="flex shrink-0 flex-col items-center border-r border-white/10 pr-6 md:pr-10">
                     <span className="font-display text-3xl font-bold leading-none text-white">
                       {day}
@@ -87,7 +89,7 @@ export default function Eventos() {
                     href={event.ticket_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="noid-button shrink-0 self-start text-center sm:self-center"
+                    className="noid-button relative z-10 shrink-0 self-start text-center transition-colors group-hover:border-white group-hover:bg-white group-hover:text-black sm:self-center"
                   >
                     Entradas →
                   </a>

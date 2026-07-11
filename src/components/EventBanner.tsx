@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import EventFlyerBackdrop from './EventFlyerBackdrop'
 import { fetchNextEvent, splitDate, type EventRow } from '../lib/events'
 
 /**
@@ -24,21 +25,7 @@ export default function EventBanner() {
   const inner = (
     <div className="noid-card group relative flex flex-col gap-6 overflow-hidden p-8 sm:flex-row sm:items-center sm:justify-between md:p-10">
       {/* blurred flyer as backdrop */}
-      {event.image_url && (
-        <>
-          <img
-            src={event.image_url}
-            alt=""
-            aria-hidden="true"
-            loading="lazy"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-xl transition-transform duration-700 group-hover:scale-125"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/40"
-          />
-        </>
-      )}
+      {event.image_url && <EventFlyerBackdrop src={event.image_url} />}
       <div className="relative z-10 flex items-center gap-6 md:gap-10">
         <div className="flex shrink-0 flex-col items-center border-r border-white/10 pr-6 md:pr-10">
           <span className="font-display text-3xl font-bold leading-none text-white md:text-4xl">
