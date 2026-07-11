@@ -181,12 +181,15 @@ export type AdminEmbed = {
 
 const EMBED_COLS = 'id, platform, title, meta, embed_url, height, active, created_at'
 
-/** Podcasts, newest first — matches how the site orders them (auto-updates). */
-export async function fetchPodcastsAdmin(): Promise<AdminEmbed[]> {
+/** A Record Label content section that is uploaded/managed from Gestión. */
+export type MediaSection = 'podcast' | 'specials'
+
+/** Media in a section, newest first — matches how the site orders them. */
+export async function fetchMediaAdmin(section: MediaSection): Promise<AdminEmbed[]> {
   const { data, error } = await supabase
     .from('media_embeds')
     .select(EMBED_COLS)
-    .eq('section', 'podcast')
+    .eq('section', section)
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as AdminEmbed[]
@@ -223,24 +226,26 @@ export function buildEmbedUrl(
   return null
 }
 
-export type PodcastInput = {
+export type MediaInput = {
   title: string
   meta: string | null
   source: string // whatever the user pasted
+  section: MediaSection
 }
 
-export async function createPodcast(input: PodcastInput): Promise<AdminEmbed> {
+export async function createMediaEmbed(input: MediaInput): Promise<AdminEmbed> {
   const built = buildEmbedUrl(input.source)
-  if (!built) throw new Error('Link no reconocido. Pega un enlace de SoundCloud.')
+  if (!built) throw new Error('Link no reconocido. Pega un enlace de SoundCloud o Bandcamp.')
+  const defaultTitle = input.section === 'podcast' ? 'Podcast Sessions' : ''
   const { data, error } = await supabase
     .from('media_embeds')
     .insert({
       platform: built.platform,
-      title: input.title.trim() || 'Podcast Sessions',
+      title: input.title.trim() || defaultTitle,
       meta: input.meta?.trim() || null,
       embed_url: built.embed_url,
       height: built.height,
-      section: 'podcast',
+      section: input.section,
       active: true,
       position: 0,
     })
@@ -250,7 +255,7 @@ export async function createPodcast(input: PodcastInput): Promise<AdminEmbed> {
   return data as AdminEmbed
 }
 
-export async function updatePodcast(
+export async function updateMediaEmbed(
   id: string,
   patch: { title?: string; meta?: string | null; active?: boolean; source?: string },
 ): Promise<void> {
@@ -274,7 +279,7 @@ export async function updatePodcast(
   if (!data || data.length === 0) throw new Error('not updated')
 }
 
-export async function deletePodcast(id: string): Promise<void> {
+export async function deleteMediaEmbed(id: string): Promise<void> {
   const { error } = await supabase.from('media_embeds').delete().eq('id', id)
   if (error) throw error
 }

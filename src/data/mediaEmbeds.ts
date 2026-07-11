@@ -26,10 +26,11 @@ export type MediaEmbed = {
 }
 
 /**
- * Podcasts auto-update: newest upload first (so the latest is always shown),
- * falling back to position for the seed rows that share a timestamp.
+ * Auto-updating sections (podcast, specials): newest upload first (so the
+ * latest is always shown), falling back to position for seed rows that share
+ * a timestamp.
  */
-export function sortPodcastsNewestFirst(a: MediaEmbed, b: MediaEmbed): number {
+export function sortNewestFirst(a: MediaEmbed, b: MediaEmbed): number {
   const ca = a.created_at ?? ''
   const cb = b.created_at ?? ''
   if (ca !== cb) return cb.localeCompare(ca)

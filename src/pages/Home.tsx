@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import {
   MEDIA_EMBEDS,
   classifySection,
-  sortPodcastsNewestFirst,
+  sortNewestFirst,
   type MediaEmbed,
 } from '../data/mediaEmbeds'
 import CourseCard from '../components/CourseCard'
@@ -93,7 +93,7 @@ export default function Home() {
   // podcasts: newest first so the latest weekly upload is always shown; 3 on the landing
   const podcast = embeds
     .filter((e) => e.active && e.section === 'podcast')
-    .sort(sortPodcastsNewestFirst)
+    .sort(sortNewestFirst)
     .slice(0, 3)
 
   return (

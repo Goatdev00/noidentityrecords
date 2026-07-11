@@ -1,28 +1,80 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import ConfirmDialog from '../ConfirmDialog'
 import {
   buildEmbedUrl,
-  createPodcast,
-  deletePodcast,
-  fetchPodcastsAdmin,
-  updatePodcast,
+  createMediaEmbed,
+  deleteMediaEmbed,
+  fetchMediaAdmin,
+  updateMediaEmbed,
   type AdminEmbed,
+  type MediaSection,
 } from '../../lib/admin'
 
 const inputClass =
   'w-full min-w-0 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.05em] text-white placeholder:text-white/25 focus:border-white/40 focus:outline-none transition-colors duration-300'
 const labelClass = 'text-[10px] uppercase tracking-[0.3em] text-white/50'
 
-function PodcastForm({
+type Copy = {
+  heading: string
+  newLabel: string
+  publishLabel: string
+  emptyText: string
+  hint: string
+  titleLabel: string
+  metaLabel: string
+  metaPlaceholder: string
+  titlePlaceholder: string
+  sourcePlaceholder: string
+  note: string
+  deleteTitle: string
+}
+
+const COPY: Record<MediaSection, Copy> = {
+  podcast: {
+    heading: 'PODCAST',
+    newLabel: '+ Nuevo episodio',
+    publishLabel: 'Publicar podcast',
+    emptyText: 'AÚN NO HAY PODCASTS. PUBLICA EL PRIMERO.',
+    hint: 'la landing muestra 3, Record Label 6',
+    titleLabel: 'Título',
+    titlePlaceholder: 'Podcast Sessions',
+    metaLabel: 'Invitado / artista',
+    metaPlaceholder: 'Tepé',
+    sourcePlaceholder: 'https://soundcloud.com/noidcol/no-id-podcast-sessions-…',
+    note: 'Pega el link del episodio en SoundCloud (o el código <iframe> de «Compartir → Insertar»). Se genera el reproductor automáticamente.',
+    deleteTitle: 'ELIMINAR PODCAST',
+  },
+  specials: {
+    heading: 'NO.ID SPECIALS',
+    newLabel: '+ Nueva publicación',
+    publishLabel: 'Publicar',
+    emptyText: 'AÚN NO HAY PUBLICACIONES. SUBE LA PRIMERA.',
+    hint: 'Record Label muestra 6 · aquí va todo lo que no es podcast',
+    titleLabel: 'Título',
+    titlePlaceholder: 'Specials 003 / Premiere / Collection…',
+    metaLabel: 'Artista',
+    metaPlaceholder: 'I-AM',
+    sourcePlaceholder: 'https://soundcloud.com/noidcol/… (o link de Bandcamp)',
+    note: 'Pega el link de SoundCloud o Bandcamp (o el código <iframe> de «Compartir → Insertar»). Se genera el reproductor automáticamente.',
+    deleteTitle: 'ELIMINAR PUBLICACIÓN',
+  },
+}
+
+function MediaForm({
+  section,
   initial,
   onSaved,
   onCancel,
 }: {
+  section: MediaSection
   initial?: AdminEmbed
   onSaved: () => void
   onCancel: () => void
 }) {
-  const [title, setTitle] = useState(initial?.title ?? 'Podcast Sessions')
+  const c = COPY[section]
+  const [title, setTitle] = useState(
+    initial?.title ?? (section === 'podcast' ? 'Podcast Sessions' : ''),
+  )
   const [meta, setMeta] = useState(initial?.meta ?? '')
   const [source, setSource] = useState('')
   const [saving, setSaving] = useState(false)
@@ -31,20 +83,16 @@ function PodcastForm({
   const preview = source ? buildEmbedUrl(source) : null
 
   const save = async () => {
-    if (!initial && !source.trim()) return setError('Pega el enlace del podcast (SoundCloud).')
+    if (!initial && !source.trim()) return setError('Pega el enlace (SoundCloud o Bandcamp).')
     if (source.trim() && !buildEmbedUrl(source))
-      return setError('No reconocí el link. Pega la URL de SoundCloud del episodio.')
+      return setError('No reconocí el link. Pega una URL de SoundCloud o Bandcamp.')
     setSaving(true)
     setError(null)
     try {
       if (initial) {
-        await updatePodcast(initial.id, {
-          title,
-          meta,
-          ...(source.trim() ? { source } : {}),
-        })
+        await updateMediaEmbed(initial.id, { title, meta, ...(source.trim() ? { source } : {}) })
       } else {
-        await createPodcast({ title, meta: meta || null, source })
+        await createMediaEmbed({ title, meta: meta || null, source, section })
       }
       onSaved()
     } catch (e) {
@@ -57,47 +105,41 @@ function PodcastForm({
     <div className="noid-card flex flex-col gap-5 p-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label className={labelClass}>Título</label>
+          <label className={labelClass}>{c.titleLabel}</label>
           <input
             className={inputClass}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Podcast Sessions"
+            placeholder={c.titlePlaceholder}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <label className={labelClass}>Invitado / artista</label>
+          <label className={labelClass}>{c.metaLabel}</label>
           <input
             className={inputClass}
             value={meta}
             onChange={(e) => setMeta(e.target.value)}
-            placeholder="Tepé"
+            placeholder={c.metaPlaceholder}
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className={labelClass}>
-          {initial ? 'Reemplazar enlace (opcional)' : 'Enlace de SoundCloud *'}
-        </label>
+        <label className={labelClass}>{initial ? 'Reemplazar enlace (opcional)' : 'Enlace *'}</label>
         <input
           className={inputClass}
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          placeholder="https://soundcloud.com/noidcol/no-id-podcast-sessions-…"
+          placeholder={c.sourcePlaceholder}
         />
-        <p className="text-[9px] uppercase leading-relaxed tracking-[0.2em] text-white/35">
-          Pega el link del episodio en SoundCloud (o el código &lt;iframe&gt; de
-          «Compartir → Insertar»). Se genera el reproductor automáticamente.
-        </p>
+        <p className="text-[9px] uppercase leading-relaxed tracking-[0.2em] text-white/35">{c.note}</p>
       </div>
 
-      {/* live player preview */}
       {preview && (
         <div className="border border-white/10">
           <iframe
             src={preview.embed_url}
-            title="Vista previa del podcast"
+            title="Vista previa"
             width="100%"
             height={preview.height}
             style={{ border: 0, display: 'block' }}
@@ -111,7 +153,7 @@ function PodcastForm({
 
       <div className="flex gap-3">
         <button onClick={() => void save()} disabled={saving} className="noid-button disabled:opacity-40">
-          {saving ? 'Guardando…' : initial ? 'Guardar cambios' : 'Publicar podcast'}
+          {saving ? 'Guardando…' : initial ? 'Guardar cambios' : c.publishLabel}
         </button>
         <button onClick={onCancel} className="text-[10px] uppercase tracking-[0.25em] text-white/40 hover:text-white">
           Cancelar
@@ -121,27 +163,31 @@ function PodcastForm({
   )
 }
 
-export default function PodcastAdmin() {
+export default function MediaAdmin({ section }: { section: MediaSection }) {
+  const c = COPY[section]
   const [items, setItems] = useState<AdminEmbed[] | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<AdminEmbed | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const topRef = useRef<HTMLDivElement>(null)
 
   const reload = () =>
-    fetchPodcastsAdmin()
+    fetchMediaAdmin(section)
       .then(setItems)
       .catch(() => setItems([]))
 
   useEffect(() => {
+    setItems(null)
+    setCreating(false)
+    setEditing(null)
     reload()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section])
 
   const toggle = async (e: AdminEmbed) => {
     setBusy(e.id)
     try {
-      await updatePodcast(e.id, { active: !e.active })
+      await updateMediaEmbed(e.id, { active: !e.active })
       await reload()
     } finally {
       setBusy(null)
@@ -152,33 +198,33 @@ export default function PodcastAdmin() {
     const t = pendingDelete
     setPendingDelete(null)
     if (!t) return
-    await deletePodcast(t.id).catch(() => {})
+    await deleteMediaEmbed(t.id).catch(() => {})
     reload()
   }
 
   const activeCount = items?.filter((i) => i.active).length ?? 0
 
   return (
-    <div ref={topRef} className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="noid-label">PODCAST</h2>
+          <h2 className="noid-label">{c.heading}</h2>
           {items && (
             <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
-              {activeCount} activos · la landing muestra 3, Record Label 4
-              {activeCount < 3 && ' · sube al menos 3'}
+              {activeCount} activos · {c.hint}
             </p>
           )}
         </div>
         {!creating && !editing && (
           <button onClick={() => setCreating(true)} className="noid-button">
-            + Nuevo episodio
+            {c.newLabel}
           </button>
         )}
       </div>
 
       {creating && (
-        <PodcastForm
+        <MediaForm
+          section={section}
           onSaved={() => {
             setCreating(false)
             reload()
@@ -192,15 +238,14 @@ export default function PodcastAdmin() {
           CARGANDO
         </p>
       ) : items.length === 0 && !creating ? (
-        <p className="py-8 text-center text-xs tracking-[0.15em] text-white/40">
-          AÚN NO HAY PODCASTS. PUBLICA EL PRIMERO.
-        </p>
+        <p className="py-8 text-center text-xs tracking-[0.15em] text-white/40">{c.emptyText}</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {items.map((e, i) =>
             editing === e.id ? (
               <li key={e.id}>
-                <PodcastForm
+                <MediaForm
+                  section={section}
                   initial={e}
                   onSaved={() => {
                     setEditing(null)
@@ -259,7 +304,7 @@ export default function PodcastAdmin() {
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="ELIMINAR PODCAST"
+        title={c.deleteTitle}
         copy={`SE ELIMINARÁ "${pendingDelete?.title}${pendingDelete?.meta ? ` · ${pendingDelete.meta}` : ''}". ESTA ACCIÓN NO SE PUEDE DESHACER.`}
         confirmLabel="Eliminar"
         onConfirm={() => void onDelete()}
