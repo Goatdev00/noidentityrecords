@@ -20,6 +20,7 @@ import Perfil from './pages/Perfil'
 import Panel from './pages/Panel'
 import PanelCurso from './pages/PanelCurso'
 import Mailing from './pages/Mailing'
+import Gestion from './pages/Gestion'
 import Verificar from './pages/Verificar'
 import Terminos from './pages/Terminos'
 import Contacto from './pages/Contacto'
@@ -38,6 +39,7 @@ const TITLES: Record<string, string> = {
   '/perfil': 'Mi perfil — NO.IDENTITY RECORDS',
   '/panel': 'Panel de maestro — NO.IDENTITY RECORDS',
   '/mailing': 'Mailing — NO.IDENTITY RECORDS',
+  '/gestion': 'Gestión — NO.IDENTITY RECORDS',
   '/terminos': 'Términos — NO.IDENTITY RECORDS',
   '/contacto': 'Contacto — NO.IDENTITY RECORDS',
 }
@@ -134,6 +136,14 @@ export default function App() {
             element={
               <RequireSuper>
                 <Mailing />
+              </RequireSuper>
+            }
+          />
+          <Route
+            path="/gestion"
+            element={
+              <RequireSuper>
+                <Gestion />
               </RequireSuper>
             }
           />

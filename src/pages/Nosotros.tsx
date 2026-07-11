@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { WHATSAPP_CHANNEL } from '../lib/constants'
 
@@ -62,15 +63,23 @@ export default function Nosotros() {
             fortalecen la cultura electrónica.
           </p>
         </div>
-        <a
-          href={WHATSAPP_CHANNEL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="noid-button flex items-center gap-3 self-start"
-        >
-          <WhatsAppIcon />
-          Únete al canal de WhatsApp
-        </a>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+          <a
+            href={WHATSAPP_CHANNEL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="noid-button flex items-center gap-3"
+          >
+            <WhatsAppIcon />
+            Únete al canal de WhatsApp
+          </a>
+          <Link
+            to="/terminos"
+            className="text-[10px] uppercase tracking-[0.3em] text-white/40 underline underline-offset-4 transition-colors hover:text-white"
+          >
+            Términos y condiciones →
+          </Link>
+        </div>
       </section>
 
       {/* artistas */}

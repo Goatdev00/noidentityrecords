@@ -115,9 +115,14 @@ export default function UserMenu() {
             </Link>
           )}
           {profile?.is_super && (
-            <Link to="/mailing" onClick={() => setOpen(false)} className={itemClass}>
-              Mailing
-            </Link>
+            <>
+              <Link to="/gestion" onClick={() => setOpen(false)} className={itemClass}>
+                Gestión
+              </Link>
+              <Link to="/mailing" onClick={() => setOpen(false)} className={itemClass}>
+                Mailing
+              </Link>
+            </>
           )}
           <div aria-hidden="true" className="mx-5 my-2 h-px bg-white/10" />
           <button
