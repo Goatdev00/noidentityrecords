@@ -5,3 +5,7 @@ verify_jwt = true
 
 [functions.send-campaign]
 verify_jwt = true
+
+# public: visitors send us messages from /contacto without an account
+[functions.send-contact]
+verify_jwt = false
