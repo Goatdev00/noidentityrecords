@@ -117,7 +117,7 @@ function certificateEmail(studentName: string, courseTitle: string, code: string
   return `
 <div style="background:#000;padding:48px 16px;font-family:'Space Grotesk',Arial,sans-serif;">
   <div style="max-width:480px;margin:0 auto;border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:40px 32px;background:#000;text-align:center;">
-    <img src="${SITE}/logo-noid-wordmark.png" alt="NO.ID RECORDS" width="140" style="display:block;margin:0 auto 32px;opacity:.9;" />
+    <img src="${SITE}/logo-noid-wordmark.png" alt="NO.IDENTITY RECORDS" width="140" style="display:block;margin:0 auto 32px;opacity:.9;" />
     <h1 style="color:#fff;font-size:14px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;margin:0 0 24px;">Tu certificado está listo</h1>
     <p style="color:rgba(255,255,255,0.6);font-size:13px;line-height:1.9;letter-spacing:.08em;margin:0 0 12px;">
       FELICITACIONES ${studentName.toUpperCase()}. COMPLETASTE EL CURSO
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
       const { data: profile } = await admin
         .from('profiles').select('display_name').eq('id', user.id).maybeSingle()
       // deno-lint-ignore no-explicit-any
-      const teacherName = (course as any)?.teacher?.display_name || 'No.ID Records'
+      const teacherName = (course as any)?.teacher?.display_name || 'No.Identity Records'
       return {
         studentName: profile?.display_name || user.email?.split('@')[0] || 'Estudiante',
         courseTitle: course?.title || 'Curso',
@@ -272,9 +272,9 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: 'No.ID Records <no-reply@noidentityrecords.com>',
+          from: 'No.Identity Records <no-reply@noidentityrecords.com>',
           to: [user.email],
-          subject: 'TU CERTIFICADO — NO.ID RECORDS',
+          subject: 'TU CERTIFICADO — NO.IDENTITY RECORDS',
           html: certificateEmail(names.studentName, names.courseTitle, cert.code),
           attachments: [{ filename: `certificado-noid-${cert.code}.pdf`, content: toBase64(lastPdf) }],
         }),

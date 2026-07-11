@@ -98,7 +98,7 @@ export default function Aprender() {
 
   useEffect(() => {
     if (load.status === 'ready') {
-      document.title = `${load.course.title} — NO.ID RECORDS`
+      document.title = `${load.course.title} — NO.IDENTITY RECORDS`
     }
   }, [load])
 

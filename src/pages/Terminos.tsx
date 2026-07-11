@@ -3,8 +3,8 @@ import { SOCIALS } from '../lib/constants'
 
 const SECTIONS: { title: string; body: string }[] = [
   {
-    title: '01 · Quiénes somos',
-    body: 'No.ID Records es un sello y colectivo de techno con sede en Bogotá, Colombia. A través de este sitio ofrecemos cursos de la academia, productos de la tienda (merch) y enlaces a nuestra música. Al usar el sitio aceptas estos términos.',
+    title: '01 · ¿Quiénes somos?',
+    body: 'No.ID es una comunidad cultural y plataforma dedicada al desarrollo, gestión, distribución y expansión de la escena de la música electrónica. Nuestro propósito es crear espacios donde la música, el arte y las conexiones humanas impulsen el crecimiento de artistas, productores y público.\n\nCon sede en Bogotá, Colombia, No.ID integra un sello discográfico, una academia de formación y una línea de productos oficiales (merch), además de promover eventos, experiencias y proyectos que fortalecen la cultura electrónica. A través de este sitio web podrás acceder a nuestros cursos, productos y música.\n\nAl utilizar este sitio, aceptas los presentes términos y condiciones.',
   },
   {
     title: '02 · Cuentas',
@@ -36,7 +36,7 @@ const SECTIONS: { title: string; body: string }[] = [
   },
   {
     title: '09 · Propiedad intelectual',
-    body: 'La música, los cursos, la marca No.ID y todo el contenido del sitio pertenecen a sus respectivos autores y a No.ID Records. No está permitido su uso sin autorización.',
+    body: 'La música, los cursos, la marca No.ID y todo el contenido del sitio pertenecen a sus respectivos autores y a No.Identity Records. No está permitido su uso sin autorización.',
   },
   {
     title: '10 · Contacto',
@@ -60,7 +60,7 @@ export default function Terminos() {
             <h2 className="font-display text-[11px] uppercase tracking-[0.25em] text-white">
               {s.title}
             </h2>
-            <p className="text-sm leading-loose tracking-[0.03em] text-white/60">{s.body}</p>
+            <p className="whitespace-pre-line text-sm leading-loose tracking-[0.03em] text-white/60">{s.body}</p>
           </section>
         ))}
       </div>

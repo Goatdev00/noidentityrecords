@@ -101,7 +101,7 @@ export default function Curso() {
 
   useEffect(() => {
     if (state.status === 'ready') {
-      document.title = `${state.course.title} — NO.ID RECORDS`
+      document.title = `${state.course.title} — NO.IDENTITY RECORDS`
     }
   }, [state])
 

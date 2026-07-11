@@ -22,7 +22,7 @@ const labelClass = 'text-[10px] uppercase tracking-[0.3em] text-white/50'
 
 const EMPTY: CampaignDraft = {
   subject: '',
-  from_name: 'No.ID Records',
+  from_name: 'No.Identity Records',
   from_email: 'info@noidentityrecords.com',
   reply_to: 'noid.colombia@gmail.com',
   image_url: null,

@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
-import { Routes, Route, useLocation, useNavigationType } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { AuthProvider } from './lib/auth'
 import { CartProvider } from './lib/cart'
 import { RequireAuth, RequireTeacher, RequireSuper } from './components/guards'
 import Home from './pages/Home'
-import Musica from './pages/Musica'
+import RecordLabel from './pages/RecordLabel'
+import Eventos from './pages/Eventos'
+import Nosotros from './pages/Nosotros'
 import Academia from './pages/Academia'
 import Curso from './pages/Curso'
 import Aprender from './pages/Aprender'
@@ -24,18 +26,20 @@ import Contacto from './pages/Contacto'
 import NotFound from './pages/NotFound'
 
 const TITLES: Record<string, string> = {
-  '/': 'NO.ID RECORDS',
-  '/musica': 'Música — NO.ID RECORDS',
-  '/academia': 'Academia — NO.ID RECORDS',
-  '/merch': 'Merch — NO.ID RECORDS',
-  '/checkout': 'Finalizar compra — NO.ID RECORDS',
-  '/login': 'Acceso — NO.ID RECORDS',
-  '/restablecer': 'Nueva contraseña — NO.ID RECORDS',
-  '/perfil': 'Mi perfil — NO.ID RECORDS',
-  '/panel': 'Panel de maestro — NO.ID RECORDS',
-  '/mailing': 'Mailing — NO.ID RECORDS',
-  '/terminos': 'Términos — NO.ID RECORDS',
-  '/contacto': 'Contacto — NO.ID RECORDS',
+  '/': 'NO.IDENTITY RECORDS',
+  '/label': 'Record Label — NO.IDENTITY RECORDS',
+  '/eventos': 'Eventos — NO.IDENTITY RECORDS',
+  '/nosotros': 'Nosotros — NO.IDENTITY RECORDS',
+  '/academia': 'Academia — NO.IDENTITY RECORDS',
+  '/merch': 'Merch — NO.IDENTITY RECORDS',
+  '/checkout': 'Finalizar compra — NO.IDENTITY RECORDS',
+  '/login': 'Acceso — NO.IDENTITY RECORDS',
+  '/restablecer': 'Nueva contraseña — NO.IDENTITY RECORDS',
+  '/perfil': 'Mi perfil — NO.IDENTITY RECORDS',
+  '/panel': 'Panel de maestro — NO.IDENTITY RECORDS',
+  '/mailing': 'Mailing — NO.IDENTITY RECORDS',
+  '/terminos': 'Términos — NO.IDENTITY RECORDS',
+  '/contacto': 'Contacto — NO.IDENTITY RECORDS',
 }
 
 /**
@@ -53,14 +57,14 @@ function RouteChange() {
     document.title =
       TITLES[pathname] ??
       (pathname.startsWith('/academia/')
-        ? 'Academia — NO.ID RECORDS'
+        ? 'Academia — NO.IDENTITY RECORDS'
         : pathname.startsWith('/merch/')
-          ? 'Merch — NO.ID RECORDS'
+          ? 'Merch — NO.IDENTITY RECORDS'
           : pathname.startsWith('/panel/')
-            ? 'Panel de maestro — NO.ID RECORDS'
+            ? 'Panel de maestro — NO.IDENTITY RECORDS'
             : pathname.startsWith('/verificar/')
-              ? 'Verificar certificado — NO.ID RECORDS'
-              : 'Nada aquí — NO.ID RECORDS')
+              ? 'Verificar certificado — NO.IDENTITY RECORDS'
+              : 'Nada aquí — NO.IDENTITY RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
@@ -82,7 +86,11 @@ export default function App() {
         <Routes>
           <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/musica" element={<Musica />} />
+          <Route path="/label" element={<RecordLabel />} />
+          <Route path="/eventos" element={<Eventos />} />
+          <Route path="/nosotros" element={<Nosotros />} />
+          {/* legacy URL from the old structure */}
+          <Route path="/musica" element={<Navigate to="/label" replace />} />
           <Route path="/academia" element={<Academia />} />
           <Route path="/academia/:slug" element={<Curso />} />
           <Route

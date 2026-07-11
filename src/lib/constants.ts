@@ -8,11 +8,16 @@ export const SOCIALS = [
 export const NAV_ITEMS = [
   { label: 'ACADEMIA', to: '/academia' },
   { label: 'MERCH', to: '/merch' },
-  { label: 'MÚSICA', to: '/musica' },
+  { label: 'RECORD LABEL', to: '/label' },
+  { label: 'EVENTOS', to: '/eventos' },
+  { label: 'NOSOTROS', to: '/nosotros' },
 ] as const
 
+export const WHATSAPP_CHANNEL =
+  'https://www.whatsapp.com/channel/0029VaKiwED7YSczqMRMDf1O'
+
 export const BRAND = {
-  name: 'NO.ID RECORDS',
+  name: 'NO.IDENTITY RECORDS',
   shortName: 'NO.ID',
   copyright: '© 2026 NO.IDENTITY.',
   city: 'BOGOTÁ',

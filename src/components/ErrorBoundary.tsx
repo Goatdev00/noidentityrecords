@@ -24,7 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 text-center">
-        <img src="/logo-noid-wordmark.png" alt="No.ID Records" className="w-40 opacity-60" />
+        <img src="/logo-noid-wordmark.png" alt="No.Identity Records" className="w-40 opacity-60" />
         <h1 className="noid-title text-base leading-relaxed text-white">ALGO SALIÓ MAL</h1>
         <p className="max-w-sm text-xs leading-loose tracking-[0.15em] text-white/40">
           OCURRIÓ UN ERROR INESPERADO. RECARGA LA PÁGINA PARA CONTINUAR.

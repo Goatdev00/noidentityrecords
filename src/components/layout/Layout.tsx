@@ -19,7 +19,7 @@ export default function Layout() {
       <CartDrawer />
       {/* header is fixed: pt clears its two-row mobile height / one-row desktop height.
           tabIndex -1 lets RouteChange move focus here on navigation */}
-      <main id="contenido" tabIndex={-1} className="flex-1 pt-28 outline-none md:pt-24">
+      <main id="contenido" tabIndex={-1} className="flex-1 pt-32 outline-none md:pt-24">
         <Outlet />
       </main>
       <Footer />

@@ -4,9 +4,10 @@ import { BRAND } from '../lib/constants'
 import { fetchPublishedCourses, type CourseSummary } from '../lib/academia'
 import { fetchProducts, type ProductSummary } from '../lib/merch'
 import { supabase } from '../lib/supabase'
-import { MEDIA_EMBEDS, type MediaEmbed } from '../data/mediaEmbeds'
+import { MEDIA_EMBEDS, classifySection, type MediaEmbed } from '../data/mediaEmbeds'
 import CourseCard from '../components/CourseCard'
 import AudioEmbed from '../components/AudioEmbed'
+import EventBanner from '../components/EventBanner'
 import { formatCOP } from '../lib/format'
 
 /** Section wrapper with the original left label + a "ver todo" link. */
@@ -58,7 +59,7 @@ export default function Home() {
       .catch(() => !cancelled && setProducts([]))
     supabase
       .from('media_embeds')
-      .select('id, platform, title, meta, embed_url, height, position, active')
+      .select('id, platform, title, meta, embed_url, height, position, active, section')
       .eq('active', true)
       .order('position')
       .then(({ data, error }) => {
@@ -68,6 +69,7 @@ export default function Home() {
               ...r,
               meta: r.meta ?? '',
               height: r.height ?? (r.platform === 'bandcamp' ? 654 : 280),
+              section: classifySection(r),
             })) as MediaEmbed[],
           )
         }
@@ -80,11 +82,11 @@ export default function Home() {
   const featuredCourse = courses?.[0] ?? null
   const merchPreview = (products ?? []).slice(0, 6)
   const bandcamp = embeds
-    .filter((e) => e.active && e.platform === 'bandcamp')
+    .filter((e) => e.active && e.section === 'bandcamp')
     .sort((a, b) => a.position - b.position)
     .slice(0, 3)
-  const soundcloud = embeds
-    .filter((e) => e.active && e.platform === 'soundcloud')
+  const podcast = embeds
+    .filter((e) => e.active && e.section === 'podcast')
     .sort((a, b) => a.position - b.position)
     .slice(0, 3)
 
@@ -94,16 +96,19 @@ export default function Home() {
       <section className="flex min-h-[52vh] flex-col items-center justify-center gap-8 py-16 text-center">
         <img
           src="/logo-noid-wordmark.png"
-          alt="No.ID Records"
+          alt="No.Identity Records"
           className="w-52 animate-float md:w-72"
         />
         <div className="flex flex-col gap-4">
           <h1 className="noid-title text-2xl leading-relaxed text-white md:text-4xl">
-            NO.ID RECORDS
+            NO.IDENTITY RECORDS
           </h1>
           <p className="noid-label text-center">TECHNO · {BRAND.city}</p>
         </div>
       </section>
+
+      {/* próximo evento */}
+      <EventBanner />
 
       {/* ACADEMIA */}
       <Section label="ACADEMIA" to="/academia">
@@ -160,9 +165,9 @@ export default function Home() {
         )}
       </Section>
 
-      {/* MÚSICA */}
+      {/* RECORD LABEL */}
       {bandcamp.length > 0 && (
-        <Section label="BANDCAMP" to="/musica">
+        <Section label="RECORD LABEL" to="/label">
           <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-3">
             {bandcamp.map((e) => (
               <AudioEmbed key={e.id} embed={e} />
@@ -171,10 +176,10 @@ export default function Home() {
         </Section>
       )}
 
-      {soundcloud.length > 0 && (
-        <Section label="SOUNDCLOUD" to="/musica">
+      {podcast.length > 0 && (
+        <Section label="PODCAST" to="/label#podcast">
           <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-3">
-            {soundcloud.map((e) => (
+            {podcast.map((e) => (
               <AudioEmbed key={e.id} embed={e} />
             ))}
           </div>

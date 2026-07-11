@@ -4,7 +4,9 @@ import { BRAND, SOCIALS } from '../../lib/constants'
 const FOOTER_LINKS = [
   { label: 'Academia', to: '/academia' },
   { label: 'Merch', to: '/merch' },
-  { label: 'Música', to: '/musica' },
+  { label: 'Record Label', to: '/label' },
+  { label: 'Eventos', to: '/eventos' },
+  { label: 'Nosotros', to: '/nosotros' },
   { label: 'Términos', to: '/terminos' },
   { label: 'Contacto', to: '/contacto' },
 ] as const
@@ -50,7 +52,7 @@ export default function Footer() {
 
         <img
           src="/logo-noid-wordmark.png"
-          alt="No.ID Records"
+          alt="No.Identity Records"
           className="mt-12 h-3.5 w-auto opacity-40"
           loading="lazy"
         />

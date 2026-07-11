@@ -19,6 +19,21 @@ export type MediaEmbed = {
   height: number
   position: number
   active: boolean
+  /** Record Label page grouping */
+  section: 'bandcamp' | 'specials' | 'podcast'
+}
+
+/** DB rows may predate the section column — classify like the migration did. */
+export function classifySection(e: {
+  platform: string
+  title: string
+  section?: string | null
+}): 'bandcamp' | 'specials' | 'podcast' {
+  if (e.section === 'bandcamp' || e.section === 'specials' || e.section === 'podcast') {
+    return e.section
+  }
+  if (e.platform === 'bandcamp') return 'bandcamp'
+  return /^podcast/i.test(e.title) ? 'podcast' : 'specials'
 }
 
 export type PlatformLink = {
@@ -37,7 +52,7 @@ const scPermalink = (permalink: string) =>
     `https://soundcloud.com/noidcol/${permalink}`,
   )}&color=%23171616&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`
 
-export const MEDIA_EMBEDS: MediaEmbed[] = [
+const RAW_EMBEDS: Omit<MediaEmbed, 'section'>[] = [
   // ── BANDCAMP ── the original page's three albums (exact heights) + newest releases
   { id: 'bc-el-caminante-escarpado', platform: 'bandcamp', title: 'El Caminante Escarpado', meta: 'Alex Jockey · EL MAMU', embed_url: bc('2060091611'), height: 654, position: 1, active: true },
   { id: 'bc-singularidad-del-decidir', platform: 'bandcamp', title: 'Singularidad del Decidir', meta: 'Tav Shvi', embed_url: bc('4154602261'), height: 654, position: 2, active: true },
@@ -65,6 +80,11 @@ export const MEDIA_EMBEDS: MediaEmbed[] = [
   { id: 'sc-sessions-dave-l', platform: 'soundcloud', title: 'Podcast Sessions', meta: 'Dave L', embed_url: scPermalink('no-id-podcast-sessions-dave-l'), height: 280, position: 8, active: false },
   { id: 'sc-premiere-98rpm', platform: 'soundcloud', title: 'Premiere', meta: '9 8 r p m', embed_url: scPermalink('9-8-r-p-m-keep-it-simple-art'), height: 280, position: 9, active: false },
 ]
+
+export const MEDIA_EMBEDS: MediaEmbed[] = RAW_EMBEDS.map((e) => ({
+  ...e,
+  section: classifySection(e),
+}))
 
 export const OTHER_PLATFORMS: PlatformLink[] = [
   { label: 'Resident Advisor', url: 'https://fr.ra.co/promoters/142608' },

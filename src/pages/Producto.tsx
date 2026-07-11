@@ -37,7 +37,7 @@ export default function Producto() {
         setState({ status: 'ready', product })
         // preselect the first in-stock size
         setVariant(product.variants.find((v) => v.stock > 0) ?? null)
-        document.title = `${product.name} — NO.ID RECORDS`
+        document.title = `${product.name} — NO.IDENTITY RECORDS`
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'error' })

@@ -10,7 +10,7 @@ export default function Header() {
         <Link
           to="/"
           className="noid-title text-sm leading-none text-white transition-opacity duration-300 hover:opacity-60"
-          aria-label="No.ID Records — inicio"
+          aria-label="No.Identity Records — inicio"
         >
           NO.ID
         </Link>
@@ -22,14 +22,14 @@ export default function Header() {
 
         <nav
           aria-label="Navegación principal"
-          className="col-span-2 flex items-center justify-center gap-6 md:order-2 md:col-span-1 md:gap-10"
+          className="col-span-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 md:order-2 md:col-span-1 md:gap-x-7"
         >
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `font-display text-[10px] uppercase tracking-[0.5em] transition-colors duration-300 md:text-[11px] md:tracking-[0.6em] ${
+                `whitespace-nowrap font-display text-[9px] uppercase tracking-[0.3em] transition-colors duration-300 md:text-[10px] md:tracking-[0.35em] ${
                   isActive ? 'text-white' : 'text-white/40 hover:text-white'
                 }`
               }

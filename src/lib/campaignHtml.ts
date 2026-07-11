@@ -49,7 +49,7 @@ export function buildCampaignHtml(
 ${image}
 <tr><td style="padding:32px 28px;">${heading}${tagline}${paragraphs || `<p style="${p}">Tu mensaje aparecerá aquí…</p>`}${cta}</td></tr>
 <tr><td style="padding:26px 28px;border-top:1px solid #1a1a1a;text-align:center;">
-<img src="${LOGO}" width="88" alt="No.ID Records" style="opacity:.7;">
+<img src="${LOGO}" width="88" alt="No.Identity Records" style="opacity:.7;">
 <p style="margin:16px 0 0;font-size:10px;line-height:1.9;letter-spacing:.05em;color:rgba(255,255,255,.35);font-family:Arial,Helvetica,sans-serif;"><a href="${unsub}" style="color:rgba(255,255,255,.5);text-decoration:underline;">Cancelar suscripción</a> &nbsp;·&nbsp; © 2026 NO.IDENTITY</p>
 </td></tr>
 </table></td></tr></table></body></html>`
