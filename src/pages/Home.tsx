@@ -141,7 +141,7 @@ export default function Home() {
               <Link
                 key={p.id}
                 to={`/merch/${p.slug}`}
-                className="noid-card group flex w-40 shrink-0 snap-start flex-col md:w-52"
+                className="noid-card group flex w-48 shrink-0 snap-start flex-col md:w-[250px]"
               >
                 <div className="aspect-square w-full overflow-hidden bg-white/[0.02]">
                   {p.images[0] ? (
