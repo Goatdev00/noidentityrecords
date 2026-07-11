@@ -26,15 +26,12 @@ export type MediaEmbed = {
 }
 
 /**
- * Auto-updating sections (podcast, specials): newest upload first (so the
- * latest is always shown), falling back to position for seed rows that share
- * a timestamp.
+ * Display order for every section: by `position` ascending (0 = first/top).
+ * New uploads get a smaller position so they land on top automatically, and
+ * the order can be changed by drag-and-drop in Gestión.
  */
-export function sortNewestFirst(a: MediaEmbed, b: MediaEmbed): number {
-  const ca = a.created_at ?? ''
-  const cb = b.created_at ?? ''
-  if (ca !== cb) return cb.localeCompare(ca)
-  return b.position - a.position
+export function byPosition(a: MediaEmbed, b: MediaEmbed): number {
+  return a.position - b.position
 }
 
 /** DB rows may predate the section column — classify like the migration did. */

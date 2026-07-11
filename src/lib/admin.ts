@@ -176,21 +176,22 @@ export type AdminEmbed = {
   embed_url: string
   height: number
   active: boolean
+  position: number
   created_at: string
 }
 
-const EMBED_COLS = 'id, platform, title, meta, embed_url, height, active, created_at'
+const EMBED_COLS = 'id, platform, title, meta, embed_url, height, active, position, created_at'
 
 /** A Record Label content section that is uploaded/managed from Gestión. */
 export type MediaSection = 'podcast' | 'specials'
 
-/** Media in a section, newest first — matches how the site orders them. */
+/** Media in a section, in display order (position asc, 0 = first/top). */
 export async function fetchMediaAdmin(section: MediaSection): Promise<AdminEmbed[]> {
   const { data, error } = await supabase
     .from('media_embeds')
     .select(EMBED_COLS)
     .eq('section', section)
-    .order('created_at', { ascending: false })
+    .order('position', { ascending: true })
   if (error) throw error
   return (data ?? []) as AdminEmbed[]
 }
@@ -237,6 +238,15 @@ export async function createMediaEmbed(input: MediaInput): Promise<AdminEmbed> {
   const built = buildEmbedUrl(input.source)
   if (!built) throw new Error('Link no reconocido. Pega un enlace de SoundCloud o Bandcamp.')
   const defaultTitle = input.section === 'podcast' ? 'Podcast Sessions' : ''
+  // land on top: one below the current smallest position in the section
+  const { data: top } = await supabase
+    .from('media_embeds')
+    .select('position')
+    .eq('section', input.section)
+    .order('position', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  const position = (top?.position ?? 0) - 1
   const { data, error } = await supabase
     .from('media_embeds')
     .insert({
@@ -247,7 +257,7 @@ export async function createMediaEmbed(input: MediaInput): Promise<AdminEmbed> {
       height: built.height,
       section: input.section,
       active: true,
-      position: 0,
+      position,
     })
     .select(EMBED_COLS)
     .single()
@@ -282,6 +292,15 @@ export async function updateMediaEmbed(
 export async function deleteMediaEmbed(id: string): Promise<void> {
   const { error } = await supabase.from('media_embeds').delete().eq('id', id)
   if (error) throw error
+}
+
+/** Persists a manual order: writes position = index for each id, top → bottom. */
+export async function reorderMedia(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) =>
+      supabase.from('media_embeds').update({ position: i }).eq('id', id),
+    ),
+  )
 }
 
 // ── image upload (shared merch-images bucket, admin-writable) ─────────────────

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import {
   MEDIA_EMBEDS,
   classifySection,
-  sortNewestFirst,
+  byPosition,
   type MediaEmbed,
 } from '../data/mediaEmbeds'
 import CourseCard from '../components/CourseCard'
@@ -90,10 +90,10 @@ export default function Home() {
     .filter((e) => e.active && e.section === 'bandcamp')
     .sort((a, b) => a.position - b.position)
     .slice(0, 3)
-  // podcasts: newest first so the latest weekly upload is always shown; 3 on the landing
+  // podcasts: manual order (new uploads land on top); 3 on the landing
   const podcast = embeds
     .filter((e) => e.active && e.section === 'podcast')
-    .sort(sortNewestFirst)
+    .sort(byPosition)
     .slice(0, 3)
 
   return (

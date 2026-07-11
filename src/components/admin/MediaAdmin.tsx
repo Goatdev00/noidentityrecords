@@ -1,10 +1,28 @@
 import { useEffect, useState } from 'react'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import ConfirmDialog from '../ConfirmDialog'
 import {
   buildEmbedUrl,
   createMediaEmbed,
   deleteMediaEmbed,
   fetchMediaAdmin,
+  reorderMedia,
   updateMediaEmbed,
   type AdminEmbed,
   type MediaSection,
@@ -163,6 +181,89 @@ function MediaForm({
   )
 }
 
+/** One draggable row (used when no row is being edited). */
+function SortableRow({
+  e,
+  index,
+  busy,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  e: AdminEmbed
+  index: number
+  busy: boolean
+  onToggle: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: e.id,
+  })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="noid-card flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label={`Reordenar ${e.title}${e.meta ? ` · ${e.meta}` : ''}`}
+          className="shrink-0 cursor-grab touch-none px-1 text-white/30 transition-colors hover:text-white active:cursor-grabbing"
+          title="Arrastra para reordenar"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
+            <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
+            <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
+          </svg>
+        </button>
+        <span className="w-5 shrink-0 text-center font-display text-sm text-white/30">{index + 1}</span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-[12px] uppercase tracking-[0.15em] text-white">
+            {e.title}
+            {e.meta && <span className="text-white/40"> · {e.meta}</span>}
+          </p>
+          <p className="mt-1 text-[10px] tracking-[0.15em] text-white/40">
+            {e.created_at.slice(0, 10)}
+            {!e.active && ' · OCULTO'}
+          </p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-4">
+        <button
+          onClick={onToggle}
+          disabled={busy}
+          className="text-[9px] uppercase tracking-[0.25em] text-white/50 hover:text-white disabled:opacity-40"
+        >
+          {e.active ? 'Ocultar' : 'Mostrar'}
+        </button>
+        <button
+          onClick={onEdit}
+          className="text-[9px] uppercase tracking-[0.25em] text-white/50 hover:text-white"
+        >
+          Editar
+        </button>
+        <button
+          onClick={onDelete}
+          className="text-[9px] uppercase tracking-[0.25em] text-white/30 hover:text-accent"
+        >
+          Eliminar
+        </button>
+      </div>
+    </li>
+  )
+}
+
 export default function MediaAdmin({ section }: { section: MediaSection }) {
   const c = COPY[section]
   const [items, setItems] = useState<AdminEmbed[] | null>(null)
@@ -170,6 +271,11 @@ export default function MediaAdmin({ section }: { section: MediaSection }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<AdminEmbed | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
 
   const reload = () =>
     fetchMediaAdmin(section)
@@ -183,6 +289,17 @@ export default function MediaAdmin({ section }: { section: MediaSection }) {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section])
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !items) return
+    const oldIndex = items.findIndex((i) => i.id === active.id)
+    const newIndex = items.findIndex((i) => i.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+    const next = arrayMove(items, oldIndex, newIndex)
+    setItems(next) // optimistic
+    reorderMedia(next.map((i) => i.id)).catch(() => reload())
+  }
 
   const toggle = async (e: AdminEmbed) => {
     setBusy(e.id)
@@ -239,7 +356,8 @@ export default function MediaAdmin({ section }: { section: MediaSection }) {
         </p>
       ) : items.length === 0 && !creating ? (
         <p className="py-8 text-center text-xs tracking-[0.15em] text-white/40">{c.emptyText}</p>
-      ) : (
+      ) : editing ? (
+        // editing a row → plain list (drag off), the edited row shows the form
         <ol className="flex flex-col gap-3">
           {items.map((e, i) =>
             editing === e.id ? (
@@ -257,49 +375,40 @@ export default function MediaAdmin({ section }: { section: MediaSection }) {
             ) : (
               <li
                 key={e.id}
-                className="noid-card flex flex-wrap items-center justify-between gap-4 px-5 py-4"
+                className="noid-card flex items-center gap-3 px-5 py-4 opacity-50"
               >
-                <div className="flex min-w-0 items-center gap-4">
-                  <span className="w-6 shrink-0 text-center font-display text-sm text-white/30">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-display text-[12px] uppercase tracking-[0.15em] text-white">
-                      {e.title}
-                      {e.meta && <span className="text-white/40"> · {e.meta}</span>}
-                    </p>
-                    <p className="mt-1 text-[10px] tracking-[0.15em] text-white/40">
-                      {i === 0 && <span className="text-accent">ÚLTIMO · </span>}
-                      {e.created_at.slice(0, 10)}
-                      {!e.active && ' · OCULTO'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  <button
-                    onClick={() => void toggle(e)}
-                    disabled={busy === e.id}
-                    className="text-[9px] uppercase tracking-[0.25em] text-white/50 hover:text-white disabled:opacity-40"
-                  >
-                    {e.active ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                  <button
-                    onClick={() => setEditing(e.id)}
-                    className="text-[9px] uppercase tracking-[0.25em] text-white/50 hover:text-white"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => setPendingDelete(e)}
-                    className="text-[9px] uppercase tracking-[0.25em] text-white/30 hover:text-accent"
-                  >
-                    Eliminar
-                  </button>
-                </div>
+                <span className="w-5 text-center font-display text-sm text-white/30">{i + 1}</span>
+                <p className="truncate font-display text-[12px] uppercase tracking-[0.15em] text-white">
+                  {e.title}
+                  {e.meta && <span className="text-white/40"> · {e.meta}</span>}
+                </p>
               </li>
             ),
           )}
         </ol>
+      ) : (
+        <>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/30">
+            Arrastra ⠿ para reordenar · el primero se muestra arriba en la web
+          </p>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={items.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+              <ol className="flex flex-col gap-3">
+                {items.map((e, i) => (
+                  <SortableRow
+                    key={e.id}
+                    e={e}
+                    index={i}
+                    busy={busy === e.id}
+                    onToggle={() => void toggle(e)}
+                    onEdit={() => setEditing(e.id)}
+                    onDelete={() => setPendingDelete(e)}
+                  />
+                ))}
+              </ol>
+            </SortableContext>
+          </DndContext>
+        </>
       )}
 
       <ConfirmDialog
