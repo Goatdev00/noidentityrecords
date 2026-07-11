@@ -8,7 +8,6 @@ const FOOTER_LINKS = [
   { label: 'Eventos', to: '/eventos' },
   { label: 'Nosotros', to: '/nosotros' },
   { label: 'Términos', to: '/terminos' },
-  { label: 'Contacto', to: '/contacto' },
 ] as const
 
 /** Footer with the original page's typographic treatment. */
@@ -49,6 +48,14 @@ export default function Footer() {
             </Link>
           ))}
         </nav>
+
+        {/* contacto — set apart with a border so it reads as the primary action */}
+        <Link
+          to="/contacto"
+          className="mt-10 border border-white/25 px-8 py-3.5 font-display text-[10px] uppercase tracking-[0.5em] text-white/70 transition-colors duration-300 hover:border-white hover:text-white"
+        >
+          Contacto
+        </Link>
 
         <img
           src="/logo-noid-wordmark.png"
