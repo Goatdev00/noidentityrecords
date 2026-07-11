@@ -37,6 +37,24 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/** /mailing: the label's super-admin account only. Everyone else → home. */
+export function RequireSuper({ children }: { children: ReactNode }) {
+  const { session, profile, loading, profileError } = useAuth()
+  const location = useLocation()
+
+  if (loading) return <Waiting />
+  if (!session) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  }
+  if (!profile) {
+    return profileError ? <ProfileErrorState /> : <Waiting />
+  }
+  if (!profile.is_super) {
+    return <Navigate to="/" replace />
+  }
+  return <>{children}</>
+}
+
 /** /panel: teacher or admin only. Students land back on home. */
 export function RequireTeacher({ children }: { children: ReactNode }) {
   const { session, profile, loading, profileError } = useAuth()

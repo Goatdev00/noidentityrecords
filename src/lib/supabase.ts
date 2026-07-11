@@ -19,4 +19,6 @@ export type Profile = {
   role: Role
   display_name: string | null
   avatar_url: string | null
+  /** the label's own super-admin account — unlocks the mailing tool */
+  is_super: boolean
 }

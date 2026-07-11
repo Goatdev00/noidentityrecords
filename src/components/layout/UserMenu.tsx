@@ -114,6 +114,11 @@ export default function UserMenu() {
               Panel de maestro
             </Link>
           )}
+          {profile?.is_super && (
+            <Link to="/mailing" onClick={() => setOpen(false)} className={itemClass}>
+              Mailing
+            </Link>
+          )}
           <div aria-hidden="true" className="mx-5 my-2 h-px bg-white/10" />
           <button
             type="button"

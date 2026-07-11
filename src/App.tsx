@@ -3,7 +3,7 @@ import { Routes, Route, useLocation, useNavigationType } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import { AuthProvider } from './lib/auth'
 import { CartProvider } from './lib/cart'
-import { RequireAuth, RequireTeacher } from './components/guards'
+import { RequireAuth, RequireTeacher, RequireSuper } from './components/guards'
 import Home from './pages/Home'
 import Musica from './pages/Musica'
 import Academia from './pages/Academia'
@@ -17,6 +17,7 @@ import ResetPassword from './pages/ResetPassword'
 import Perfil from './pages/Perfil'
 import Panel from './pages/Panel'
 import PanelCurso from './pages/PanelCurso'
+import Mailing from './pages/Mailing'
 import Verificar from './pages/Verificar'
 import Terminos from './pages/Terminos'
 import Contacto from './pages/Contacto'
@@ -32,6 +33,7 @@ const TITLES: Record<string, string> = {
   '/restablecer': 'Nueva contraseña — NO.ID RECORDS',
   '/perfil': 'Mi perfil — NO.ID RECORDS',
   '/panel': 'Panel de maestro — NO.ID RECORDS',
+  '/mailing': 'Mailing — NO.ID RECORDS',
   '/terminos': 'Términos — NO.ID RECORDS',
   '/contacto': 'Contacto — NO.ID RECORDS',
 }
@@ -117,6 +119,14 @@ export default function App() {
               <RequireTeacher>
                 <PanelCurso />
               </RequireTeacher>
+            }
+          />
+          <Route
+            path="/mailing"
+            element={
+              <RequireSuper>
+                <Mailing />
+              </RequireSuper>
             }
           />
           <Route path="/verificar/:code" element={<Verificar />} />

@@ -2,3 +2,6 @@ project_id = "ztzgnorjnffpgytnwnvy"
 
 [functions.generate-certificate]
 verify_jwt = true
+
+[functions.send-campaign]
+verify_jwt = true
