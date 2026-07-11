@@ -63,7 +63,7 @@ export default function Nosotros() {
             fortalecen la cultura electrónica.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+        <div className="flex flex-col items-center gap-6">
           <a
             href={WHATSAPP_CHANNEL}
             target="_blank"
