@@ -33,6 +33,8 @@ type Campaign = {
   target: 'all' | 'group' | 'individual'
   group_id: string | null
   individual_email: string | null
+  group_ids: string[] | null
+  emails: string[] | null
 }
 
 const LOGO = 'https://noidentityrecords.com/logo-noid-wordmark.png'
@@ -142,17 +144,23 @@ async function runSend(admin: any, resendKey: string, c: Campaign) {
   try {
     await admin.from('mailing_campaigns').update({ status: 'sending' }).eq('id', c.id)
 
-    // resolve + dedupe recipients
+    // resolve + dedupe recipients (multi-group / multi-email aware)
     let recipients: { email: string; name: string | null }[] = []
     if (c.target === 'individual') {
-      if (!c.individual_email) throw new Error('Falta el correo individual')
-      recipients = [{ email: c.individual_email.trim().toLowerCase(), name: null }]
+      const emails = c.emails?.length
+        ? c.emails
+        : c.individual_email
+          ? [c.individual_email]
+          : []
+      if (emails.length === 0) throw new Error('Elige al menos un correo')
+      recipients = emails.map((e) => ({ email: String(e).trim().toLowerCase(), name: null }))
     } else if (c.target === 'group') {
-      if (!c.group_id) throw new Error('Falta el grupo')
+      const ids = c.group_ids?.length ? c.group_ids : c.group_id ? [c.group_id] : []
+      if (ids.length === 0) throw new Error('Elige al menos un grupo')
       const { data } = await admin
         .from('mailing_group_members')
         .select('contact:mailing_contacts(email, name)')
-        .eq('group_id', c.group_id)
+        .in('group_id', ids)
       recipients = (data ?? []).map((r: any) => r.contact).filter(Boolean)
     } else {
       const { data } = await admin.from('mailing_contacts').select('email, name')
@@ -170,7 +178,7 @@ async function runSend(admin: any, resendKey: string, c: Campaign) {
 
     const from = `${c.from_name} <${c.from_email}>`
 
-    if (c.target === 'individual') {
+    if (recipients.length === 1) {
       // single transactional email
       const r = await rsend('/emails', 'POST', {
         from, to: [recipients[0].email], reply_to: c.reply_to ?? undefined,

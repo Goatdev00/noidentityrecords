@@ -6,11 +6,13 @@ import {
   fetchCampaign,
   fetchContacts,
   fetchGroups,
+  fetchGroupsUnionCount,
   saveCampaign,
   sendCampaign,
   sendCampaignTest,
   uploadCampaignImage,
   type CampaignDraft,
+  type Contact,
   type Group,
 } from '../../lib/mailing'
 
@@ -32,12 +34,22 @@ const EMPTY: CampaignDraft = {
   target: 'all',
   group_id: null,
   individual_email: null,
+  group_ids: null,
+  emails: null,
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export default function MailingCompose({ onSent }: { onSent: () => void }) {
   const { session } = useAuth()
   const [d, setD] = useState<CampaignDraft>(EMPTY)
   const [groups, setGroups] = useState<Group[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [groupIds, setGroupIds] = useState<string[]>([])
+  const [selEmails, setSelEmails] = useState<string[]>([])
+  const [unionCount, setUnionCount] = useState(0)
+  const [contactQuery, setContactQuery] = useState('')
+  const [manualEmail, setManualEmail] = useState('')
   const [totalContacts, setTotalContacts] = useState(0)
   const [campaignId, setCampaignId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -54,8 +66,28 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
 
   useEffect(() => {
     fetchGroups().then(setGroups).catch(() => {})
-    fetchContacts().then((c) => setTotalContacts(c.length)).catch(() => {})
+    fetchContacts()
+      .then((c) => {
+        setContacts(c)
+        setTotalContacts(c.length)
+      })
+      .catch(() => {})
   }, [])
+
+  // count UNIQUE contacts across the selected groups (overlaps count once)
+  useEffect(() => {
+    if (d.target !== 'group' || groupIds.length === 0) {
+      setUnionCount(0)
+      return
+    }
+    let cancelled = false
+    fetchGroupsUnionCount(groupIds)
+      .then((n) => !cancelled && setUnionCount(n))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [groupIds, d.target])
 
   // track the preview column's real width to scale the email to fit
   useEffect(() => {
@@ -74,13 +106,7 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
   const previewHtml = useMemo(() => buildCampaignHtml(d), [d])
 
   const recipientCount =
-    d.target === 'all'
-      ? totalContacts
-      : d.target === 'group'
-        ? groups.find((g) => g.id === d.group_id)?.member_count ?? 0
-        : d.individual_email
-          ? 1
-          : 0
+    d.target === 'all' ? totalContacts : d.target === 'group' ? unionCount : selEmails.length
 
   const onImage = async (file: File) => {
     setUploading(true)
@@ -96,7 +122,14 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
   }
 
   const persist = async (): Promise<string> => {
-    const saved = await saveCampaign(d, campaignId ?? undefined)
+    const payload = {
+      ...d,
+      group_ids: d.target === 'group' ? groupIds : null,
+      emails: d.target === 'individual' ? selEmails : null,
+      group_id: null,
+      individual_email: null,
+    }
+    const saved = await saveCampaign(payload, campaignId ?? undefined)
     setCampaignId(saved.id)
     return saved.id
   }
@@ -121,9 +154,9 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
 
   const validateBeforeSend = (): string | null => {
     if (!d.subject.trim()) return 'Ponle un asunto a la campaña.'
-    if (d.target === 'group' && !d.group_id) return 'Elige un grupo.'
-    if (d.target === 'individual' && !d.individual_email?.trim())
-      return 'Escribe el correo individual.'
+    if (d.target === 'group' && groupIds.length === 0) return 'Elige al menos un grupo.'
+    if (d.target === 'individual' && selEmails.length === 0)
+      return 'Elige al menos un correo.'
     if (recipientCount === 0) return 'No hay destinatarios para este envío.'
     return null
   }
@@ -198,8 +231,11 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
     d.target === 'all'
       ? `TODOS (${totalContacts})`
       : d.target === 'group'
-        ? `GRUPO: ${groups.find((g) => g.id === d.group_id)?.name ?? '—'} (${recipientCount})`
-        : `INDIVIDUAL: ${d.individual_email ?? ''}`
+        ? `GRUPOS: ${groups
+            .filter((g) => groupIds.includes(g.id))
+            .map((g) => g.name)
+            .join(', ')} (${recipientCount} únicos)`
+        : `CORREOS ELEGIDOS (${selEmails.length})`
 
   return (
     <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_420px]">
@@ -290,21 +326,166 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
                 aria-pressed={d.target === t}
                 className={`border px-4 py-2 text-[11px] uppercase tracking-[0.2em] transition-colors ${d.target === t ? 'border-white bg-white text-black' : 'border-white/20 text-white/70 hover:border-white/50'}`}
               >
-                {t === 'all' ? 'Todos' : t === 'group' ? 'Un grupo' : 'Individual'}
+                {t === 'all' ? 'Todos' : t === 'group' ? 'Grupos' : 'Elegir correos'}
               </button>
             ))}
           </div>
-          {d.target === 'group' && (
-            <select value={d.group_id ?? ''} onChange={(e) => set('group_id', e.target.value || null)} className={inputClass}>
-              <option value="">Elige un grupo…</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name} ({g.member_count})</option>
-              ))}
-            </select>
-          )}
+
+          {/* multi-group checkboxes */}
+          {d.target === 'group' &&
+            (groups.length === 0 ? (
+              <p className="text-xs tracking-[0.15em] text-white/40">
+                AÚN NO HAY GRUPOS. CRÉALOS EN LA PESTAÑA CONTACTOS.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1 border border-white/5">
+                {groups.map((g) => {
+                  const checked = groupIds.includes(g.id)
+                  return (
+                    <label
+                      key={g.id}
+                      className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-white/[0.03]"
+                    >
+                      <span className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setGroupIds((prev) =>
+                              checked ? prev.filter((id) => id !== g.id) : [...prev, g.id],
+                            )
+                          }
+                          className="h-4 w-4 accent-[#9a64ff]"
+                        />
+                        <span className="text-xs uppercase tracking-[0.15em] text-white">
+                          {g.name}
+                        </span>
+                      </span>
+                      <span className="text-[10px] tracking-[0.2em] text-white/40">
+                        {g.member_count} contactos
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            ))}
+
+          {/* multi-contact picker with search + manual add */}
           {d.target === 'individual' && (
-            <input type="email" value={d.individual_email ?? ''} onChange={(e) => set('individual_email', e.target.value)} className={inputClass} placeholder="correo@ejemplo.com" />
+            <div className="flex flex-col gap-3">
+              {selEmails.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selEmails.map((e) => (
+                    <span
+                      key={e}
+                      className="flex items-center gap-2 border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.05em] text-white/80"
+                    >
+                      {e}
+                      <button
+                        type="button"
+                        onClick={() => setSelEmails((prev) => prev.filter((x) => x !== e))}
+                        aria-label={`Quitar ${e}`}
+                        className="text-white/40 transition-colors hover:text-accent"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelEmails([])}
+                    className="px-2 text-[9px] uppercase tracking-[0.25em] text-white/30 transition-colors hover:text-accent"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+              )}
+              <input
+                type="search"
+                value={contactQuery}
+                onChange={(e) => setContactQuery(e.target.value)}
+                placeholder="BUSCAR EN TUS CONTACTOS…"
+                className={inputClass}
+              />
+              <div className="flex max-h-56 flex-col divide-y divide-white/5 overflow-y-auto border border-white/5">
+                {contacts
+                  .filter(
+                    (c) =>
+                      !contactQuery ||
+                      c.email.includes(contactQuery.toLowerCase()) ||
+                      (c.name ?? '').toLowerCase().includes(contactQuery.toLowerCase()),
+                  )
+                  .slice(0, 60)
+                  .map((c) => {
+                    const checked = selEmails.includes(c.email)
+                    return (
+                      <label
+                        key={c.id}
+                        className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.03]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelEmails((prev) =>
+                              checked ? prev.filter((x) => x !== c.email) : [...prev, c.email],
+                            )
+                          }
+                          className="h-4 w-4 shrink-0 accent-[#9a64ff]"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs tracking-[0.05em] text-white/80">
+                            {c.email}
+                          </span>
+                          {c.name && (
+                            <span className="block truncate text-[10px] tracking-[0.1em] text-white/35">
+                              {c.name}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    )
+                  })}
+                {contacts.length === 0 && (
+                  <p className="px-4 py-3 text-[10px] tracking-[0.2em] text-white/30">
+                    NO HAY CONTACTOS GUARDADOS TODAVÍA.
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const m = manualEmail.trim().toLowerCase()
+                      if (EMAIL_RE.test(m) && !selEmails.includes(m)) {
+                        setSelEmails((prev) => [...prev, m])
+                        setManualEmail('')
+                      }
+                    }
+                  }}
+                  placeholder="O ESCRIBE UN CORREO SUELTO…"
+                  className={`${inputClass} flex-1`}
+                />
+                <button
+                  type="button"
+                  disabled={!EMAIL_RE.test(manualEmail.trim().toLowerCase())}
+                  onClick={() => {
+                    const m = manualEmail.trim().toLowerCase()
+                    if (!selEmails.includes(m)) setSelEmails((prev) => [...prev, m])
+                    setManualEmail('')
+                  }}
+                  className="noid-button disabled:opacity-40"
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
           )}
+
           <p className="text-[11px] uppercase tracking-[0.2em] text-white/50">
             Se enviará a <span className="text-accent">{recipientCount}</span> destinatario(s){' '}
             <span className="text-white/30">(sin duplicados)</span>.

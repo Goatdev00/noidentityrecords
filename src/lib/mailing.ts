@@ -18,6 +18,8 @@ export type Campaign = {
   target: 'all' | 'group' | 'individual'
   group_id: string | null
   individual_email: string | null
+  group_ids: string[] | null
+  emails: string[] | null
   status: 'draft' | 'queued' | 'sending' | 'sent' | 'failed'
   recipients_count: number
   error: string | null
@@ -140,6 +142,17 @@ export async function createGroup(name: string): Promise<Group> {
 export async function deleteGroup(id: string): Promise<void> {
   const { error } = await supabase.from('mailing_groups').delete().eq('id', id)
   if (error) throw error
+}
+
+/** Unique contacts across a set of groups (a contact in two groups counts once). */
+export async function fetchGroupsUnionCount(groupIds: string[]): Promise<number> {
+  if (groupIds.length === 0) return 0
+  const { data, error } = await supabase
+    .from('mailing_group_members')
+    .select('contact_id')
+    .in('group_id', groupIds)
+  if (error) throw error
+  return new Set((data ?? []).map((r) => r.contact_id as string)).size
 }
 
 /** Add the given contacts to a group (idempotent). */
