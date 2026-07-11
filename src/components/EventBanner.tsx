@@ -31,11 +31,11 @@ export default function EventBanner() {
             alt=""
             aria-hidden="true"
             loading="lazy"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl transition-transform duration-700 group-hover:scale-125"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-110 object-cover opacity-70 blur-xl transition-transform duration-700 group-hover:scale-125"
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/85"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/40"
           />
         </>
       )}
