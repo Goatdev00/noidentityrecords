@@ -4,6 +4,7 @@ import {
   MEDIA_EMBEDS,
   OTHER_PLATFORMS,
   classifySection,
+  sortPodcastsNewestFirst,
   type MediaEmbed,
 } from '../data/mediaEmbeds'
 import { supabase } from '../lib/supabase'
@@ -35,7 +36,7 @@ export default function RecordLabel() {
     let cancelled = false
     supabase
       .from('media_embeds')
-      .select('id, platform, title, meta, embed_url, height, position, active, section')
+      .select('id, platform, title, meta, embed_url, height, position, active, section, created_at')
       .eq('active', true)
       .order('position')
       .then(({ data, error }) => {
@@ -62,7 +63,11 @@ export default function RecordLabel() {
 
   const bandcamp = bySection('bandcamp')
   const specials = bySection('specials')
-  const podcast = bySection('podcast')
+  // podcasts: newest first (auto-updates with weekly uploads); show the latest 4
+  const podcast = embeds
+    .filter((e) => e.active && e.section === 'podcast')
+    .sort(sortPodcastsNewestFirst)
+    .slice(0, 4)
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-32 px-6 pb-28 pt-12 md:pt-20">

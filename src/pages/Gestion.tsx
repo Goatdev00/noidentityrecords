@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import EventsAdmin from '../components/admin/EventsAdmin'
 import MerchAdmin from '../components/admin/MerchAdmin'
+import PodcastAdmin from '../components/admin/PodcastAdmin'
 
-type Tab = 'eventos' | 'merch'
+type Tab = 'eventos' | 'merch' | 'podcast'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'eventos', label: 'Eventos' },
   { id: 'merch', label: 'Merch' },
+  { id: 'podcast', label: 'Podcast' },
 ]
 
 export default function Gestion() {
@@ -41,6 +43,7 @@ export default function Gestion() {
 
       {tab === 'eventos' && <EventsAdmin />}
       {tab === 'merch' && <MerchAdmin />}
+      {tab === 'podcast' && <PodcastAdmin />}
     </div>
   )
 }

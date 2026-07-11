@@ -4,7 +4,12 @@ import { BRAND } from '../lib/constants'
 import { fetchPublishedCourses, type CourseSummary } from '../lib/academia'
 import { fetchProducts, type ProductSummary } from '../lib/merch'
 import { supabase } from '../lib/supabase'
-import { MEDIA_EMBEDS, classifySection, type MediaEmbed } from '../data/mediaEmbeds'
+import {
+  MEDIA_EMBEDS,
+  classifySection,
+  sortPodcastsNewestFirst,
+  type MediaEmbed,
+} from '../data/mediaEmbeds'
 import CourseCard from '../components/CourseCard'
 import AudioEmbed from '../components/AudioEmbed'
 import EventBanner from '../components/EventBanner'
@@ -59,7 +64,7 @@ export default function Home() {
       .catch(() => !cancelled && setProducts([]))
     supabase
       .from('media_embeds')
-      .select('id, platform, title, meta, embed_url, height, position, active, section')
+      .select('id, platform, title, meta, embed_url, height, position, active, section, created_at')
       .eq('active', true)
       .order('position')
       .then(({ data, error }) => {
@@ -85,9 +90,10 @@ export default function Home() {
     .filter((e) => e.active && e.section === 'bandcamp')
     .sort((a, b) => a.position - b.position)
     .slice(0, 3)
+  // podcasts: newest first so the latest weekly upload is always shown; 3 on the landing
   const podcast = embeds
     .filter((e) => e.active && e.section === 'podcast')
-    .sort((a, b) => a.position - b.position)
+    .sort(sortPodcastsNewestFirst)
     .slice(0, 3)
 
   return (

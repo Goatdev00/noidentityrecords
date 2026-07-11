@@ -166,6 +166,119 @@ export async function deleteVariant(variantId: string): Promise<void> {
   if (error) throw error
 }
 
+// ── podcast / media embeds ───────────────────────────────────────────────────
+
+export type AdminEmbed = {
+  id: string
+  platform: 'bandcamp' | 'soundcloud'
+  title: string
+  meta: string | null
+  embed_url: string
+  height: number
+  active: boolean
+  created_at: string
+}
+
+const EMBED_COLS = 'id, platform, title, meta, embed_url, height, active, created_at'
+
+/** Podcasts, newest first — matches how the site orders them (auto-updates). */
+export async function fetchPodcastsAdmin(): Promise<AdminEmbed[]> {
+  const { data, error } = await supabase
+    .from('media_embeds')
+    .select(EMBED_COLS)
+    .eq('section', 'podcast')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as AdminEmbed[]
+}
+
+/**
+ * Turns whatever the user pastes — a plain SoundCloud/Bandcamp track URL, the
+ * full <iframe> share snippet, or an already-built player URL — into the
+ * iframe `src`. Returns null when it can't recognise a supported link.
+ */
+export function buildEmbedUrl(
+  raw: string,
+): { embed_url: string; platform: 'bandcamp' | 'soundcloud'; height: number } | null {
+  const trimmed = (raw || '').trim()
+  if (!trimmed) return null
+  // pull the src out of a pasted <iframe …>
+  const src = trimmed.match(/src\s*=\s*["']([^"']+)["']/i)?.[1] ?? trimmed
+
+  if (/w\.soundcloud\.com\/player/i.test(src)) {
+    return { embed_url: src, platform: 'soundcloud', height: 280 }
+  }
+  if (/soundcloud\.com\//i.test(src)) {
+    const clean = src.split('?')[0]
+    const enc = encodeURIComponent(clean)
+    return {
+      embed_url: `https://w.soundcloud.com/player/?url=${enc}&color=%23171616&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`,
+      platform: 'soundcloud',
+      height: 280,
+    }
+  }
+  if (/bandcamp\.com\/EmbeddedPlayer/i.test(src)) {
+    return { embed_url: src, platform: 'bandcamp', height: 654 }
+  }
+  return null
+}
+
+export type PodcastInput = {
+  title: string
+  meta: string | null
+  source: string // whatever the user pasted
+}
+
+export async function createPodcast(input: PodcastInput): Promise<AdminEmbed> {
+  const built = buildEmbedUrl(input.source)
+  if (!built) throw new Error('Link no reconocido. Pega un enlace de SoundCloud.')
+  const { data, error } = await supabase
+    .from('media_embeds')
+    .insert({
+      platform: built.platform,
+      title: input.title.trim() || 'Podcast Sessions',
+      meta: input.meta?.trim() || null,
+      embed_url: built.embed_url,
+      height: built.height,
+      section: 'podcast',
+      active: true,
+      position: 0,
+    })
+    .select(EMBED_COLS)
+    .single()
+  if (error) throw error
+  return data as AdminEmbed
+}
+
+export async function updatePodcast(
+  id: string,
+  patch: { title?: string; meta?: string | null; active?: boolean; source?: string },
+): Promise<void> {
+  const body: Record<string, unknown> = {}
+  if (patch.title !== undefined) body.title = patch.title.trim() || 'Podcast Sessions'
+  if (patch.meta !== undefined) body.meta = patch.meta?.trim() || null
+  if (patch.active !== undefined) body.active = patch.active
+  if (patch.source) {
+    const built = buildEmbedUrl(patch.source)
+    if (!built) throw new Error('Link no reconocido.')
+    body.embed_url = built.embed_url
+    body.platform = built.platform
+    body.height = built.height
+  }
+  const { error, data } = await supabase
+    .from('media_embeds')
+    .update(body)
+    .eq('id', id)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('not updated')
+}
+
+export async function deletePodcast(id: string): Promise<void> {
+  const { error } = await supabase.from('media_embeds').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ── image upload (shared merch-images bucket, admin-writable) ─────────────────
 
 /** Uploads to merch-images/{prefix}/… and returns the public URL. */

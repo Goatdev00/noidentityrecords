@@ -21,6 +21,19 @@ export type MediaEmbed = {
   active: boolean
   /** Record Label page grouping */
   section: 'bandcamp' | 'specials' | 'podcast'
+  /** upload time — podcasts sort by this so the newest is always first */
+  created_at?: string
+}
+
+/**
+ * Podcasts auto-update: newest upload first (so the latest is always shown),
+ * falling back to position for the seed rows that share a timestamp.
+ */
+export function sortPodcastsNewestFirst(a: MediaEmbed, b: MediaEmbed): number {
+  const ca = a.created_at ?? ''
+  const cb = b.created_at ?? ''
+  if (ca !== cb) return cb.localeCompare(ca)
+  return b.position - a.position
 }
 
 /** DB rows may predate the section column — classify like the migration did. */
