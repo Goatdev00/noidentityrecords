@@ -233,6 +233,27 @@ export async function sendCampaign(campaignId: string): Promise<void> {
   if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error)
 }
 
+/** Sends the campaign as a [PRUEBA] email to one address (no status change). */
+export async function sendCampaignTest(campaignId: string, testTo: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('send-campaign', {
+    body: { campaign_id: campaignId, test_to: testTo },
+  })
+  if (error) {
+    let message = 'No se pudo enviar la prueba.'
+    try {
+      const ctx = (error as { context?: Response }).context
+      if (ctx) {
+        const body = await ctx.json()
+        if (body?.error) message = body.error
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(message)
+  }
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error)
+}
+
 /** Upload a campaign image to the public `mailing` bucket, return its URL. */
 export async function uploadCampaignImage(file: File): Promise<string> {
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmDialog from '../ConfirmDialog'
 import { buildCampaignHtml } from '../../lib/campaignHtml'
+import { useAuth } from '../../lib/auth'
 import {
   fetchCampaign,
   fetchContacts,
   fetchGroups,
   saveCampaign,
   sendCampaign,
+  sendCampaignTest,
   uploadCampaignImage,
   type CampaignDraft,
   type Group,
@@ -33,6 +35,7 @@ const EMPTY: CampaignDraft = {
 }
 
 export default function MailingCompose({ onSent }: { onSent: () => void }) {
+  const { session } = useAuth()
   const [d, setD] = useState<CampaignDraft>(EMPTY)
   const [groups, setGroups] = useState<Group[]>([])
   const [totalContacts, setTotalContacts] = useState(0)
@@ -40,14 +43,29 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
+  const [testing, setTesting] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop')
+  const [previewWidth, setPreviewWidth] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchGroups().then(setGroups).catch(() => {})
     fetchContacts().then((c) => setTotalContacts(c.length)).catch(() => {})
+  }, [])
+
+  // track the preview column's real width to scale the email to fit
+  useEffect(() => {
+    const el = previewRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      setPreviewWidth(entries[0]?.contentRect.width ?? 0)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   const set = <K extends keyof CampaignDraft>(k: K, v: CampaignDraft[K]) =>
@@ -153,6 +171,27 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
       return
     }
     setConfirm(true)
+  }
+
+  const onTest = async () => {
+    if (!d.subject.trim()) {
+      setError('Ponle un asunto antes de enviar la prueba.')
+      return
+    }
+    const to = session?.user.email
+    if (!to) return
+    setTesting(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const id = await persist()
+      await sendCampaignTest(id, to)
+      setNotice(`Prueba enviada a ${to}. Revisa tu bandeja (y Promociones).`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar la prueba.')
+    } finally {
+      setTesting(false)
+    }
   }
 
   const targetLabel =
@@ -286,11 +325,88 @@ export default function MailingCompose({ onSent }: { onSent: () => void }) {
       </div>
 
       {/* live preview */}
-      <div className="flex flex-col gap-3 lg:sticky lg:top-28 lg:h-fit">
-        <h2 className="noid-label">VISTA PREVIA</h2>
-        <div className="overflow-hidden border border-white/10">
-          <iframe title="Vista previa del correo" srcDoc={previewHtml} className="h-[620px] w-full bg-black" sandbox="" />
+      <div className="flex flex-col gap-4 lg:sticky lg:top-28 lg:h-fit">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="noid-label">VISTA PREVIA</h2>
+          <div className="flex items-center gap-2" role="group" aria-label="Modo de vista previa">
+            {(['desktop', 'mobile'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setPreviewMode(m)}
+                aria-pressed={previewMode === m}
+                className={`border px-3 py-1.5 text-[9px] uppercase tracking-[0.25em] transition-colors ${
+                  previewMode === m
+                    ? 'border-white bg-white text-black'
+                    : 'border-white/20 text-white/60 hover:border-white/50'
+                }`}
+              >
+                {m === 'desktop' ? 'Escritorio' : 'Móvil'}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* inbox mock: how it looks BEFORE opening */}
+        <div className="flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent font-display text-[13px] font-bold text-black">
+            {(d.from_name || 'N').charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[12px] text-white">
+              <span className="font-bold">{d.from_name || 'Remitente'}</span>
+              <span className="ml-2 text-[10px] text-white/35">{d.from_email}</span>
+            </p>
+            <p className="truncate text-[12px] font-semibold text-white/90">
+              {d.subject || 'Asunto del correo…'}
+            </p>
+            <p className="truncate text-[11px] text-white/40">
+              {(d.body ?? '').split('\n').find(Boolean) ?? 'El inicio de tu mensaje se ve aquí…'}
+            </p>
+          </div>
+        </div>
+
+        {/* real-size render, scaled to fit the column */}
+        <div
+          ref={previewRef}
+          className="overflow-hidden border border-white/10 bg-[#0a0a0a]"
+          style={{ height: 620 }}
+        >
+          {(() => {
+            const baseW = previewMode === 'desktop' ? 632 : 400
+            const scale = previewWidth > 0 ? Math.min(1, previewWidth / baseW) : 1
+            return (
+              <div className={previewMode === 'mobile' ? 'flex justify-center' : undefined}>
+                <iframe
+                  title="Vista previa del correo"
+                  srcDoc={previewHtml}
+                  sandbox=""
+                  style={{
+                    width: baseW,
+                    height: 620 / scale,
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left',
+                    border: 0,
+                    display: 'block',
+                  }}
+                />
+              </div>
+            )
+          })()}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void onTest()}
+          disabled={testing || sending}
+          className="noid-button self-start disabled:opacity-40"
+        >
+          {testing ? 'Enviando prueba…' : 'Enviarme una prueba'}
+        </button>
+        <p className="text-[9px] uppercase leading-relaxed tracking-[0.2em] text-white/35">
+          Te llega el correo real a {session?.user.email ?? 'tu bandeja'} con el
+          asunto [PRUEBA] — sin tocar a los contactos.
+        </p>
       </div>
 
       <ConfirmDialog

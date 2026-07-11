@@ -61,6 +61,32 @@ export async function fetchMyCourses(teacherId: string): Promise<PanelCourse[]> 
   return (data ?? []) as PanelCourse[]
 }
 
+export type AdminCourse = PanelCourse & {
+  teacher: { display_name: string | null } | null
+}
+
+/** Every course on the platform (super/admin — RLS lets them see drafts too). */
+export async function fetchAllCourses(): Promise<AdminCourse[]> {
+  const { data, error } = await supabase
+    .from('courses')
+    .select(
+      'id, slug, title, subtitle, description, price_cop, cover_url, published, created_at, teacher:profiles!courses_teacher_id_fkey(display_name)',
+    )
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as AdminCourse[]
+}
+
+export async function setCoursePublished(id: string, published: boolean): Promise<void> {
+  const { error, data } = await supabase
+    .from('courses')
+    .update({ published })
+    .eq('id', id)
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('not updated')
+}
+
 export async function fetchMyCourse(id: string): Promise<PanelCourse | null> {
   const { data, error } = await supabase
     .from('courses')

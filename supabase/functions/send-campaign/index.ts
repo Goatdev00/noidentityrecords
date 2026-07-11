@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
   const resendKey = Deno.env.get('RESEND_API_KEY') ?? ''
 
   try {
-    const { campaign_id } = await req.json().catch(() => ({}))
+    const { campaign_id, test_to } = await req.json().catch(() => ({}))
     if (!campaign_id) return json({ error: 'campaign_id requerido' }, 400)
 
     const userClient = createClient(url, anon, { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } })
@@ -94,6 +94,25 @@ Deno.serve(async (req) => {
 
     const { data: campaign } = await admin.from('mailing_campaigns').select('*').eq('id', campaign_id).maybeSingle()
     if (!campaign) return json({ error: 'Campaña no encontrada' }, 404)
+
+    // test mode: one transactional email to the requester, campaign untouched
+    if (test_to) {
+      const c = campaign as Campaign
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: `${c.from_name} <${c.from_email}>`,
+          to: [String(test_to)],
+          reply_to: c.reply_to ?? undefined,
+          subject: `[PRUEBA] ${c.subject}`,
+          html: buildHtml(c, '#'),
+        }),
+      })
+      if (!r.ok) return json({ error: `No se pudo enviar la prueba: ${(await r.text()).slice(0, 160)}` }, 500)
+      return json({ status: 'test_sent' })
+    }
+
     if (campaign.status === 'sending' || campaign.status === 'queued') {
       return json({ error: 'La campaña ya se está enviando' }, 409)
     }
