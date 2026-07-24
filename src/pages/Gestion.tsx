@@ -2,14 +2,16 @@ import { useState } from 'react'
 import EventsAdmin from '../components/admin/EventsAdmin'
 import MerchAdmin from '../components/admin/MerchAdmin'
 import MediaAdmin from '../components/admin/MediaAdmin'
+import EnrollmentsAdmin from '../components/admin/EnrollmentsAdmin'
 import type { MediaSection } from '../lib/admin'
 
-type Tab = 'eventos' | 'merch' | 'label'
+type Tab = 'eventos' | 'merch' | 'label' | 'inscritos'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'eventos', label: 'Eventos' },
   { id: 'merch', label: 'Merch' },
   { id: 'label', label: 'Record Label' },
+  { id: 'inscritos', label: 'Inscritos' },
 ]
 
 const MEDIA_TABS: { id: MediaSection; label: string }[] = [
@@ -50,6 +52,7 @@ export default function Gestion() {
 
       {tab === 'eventos' && <EventsAdmin />}
       {tab === 'merch' && <MerchAdmin />}
+      {tab === 'inscritos' && <EnrollmentsAdmin />}
       {tab === 'label' && (
         <div className="flex flex-col gap-8">
           <div className="flex flex-wrap gap-3" role="group" aria-label="Tipo de contenido">
