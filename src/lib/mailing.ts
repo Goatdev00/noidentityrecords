@@ -75,12 +75,14 @@ export async function parseContactsFile(
   const out: { email: string; name: string | null }[] = []
   for (const row of rows) {
     if (!Array.isArray(row)) continue
-    const cells = row.map((c) => (c == null ? '' : String(c)).trim())
-    const email = cells.find((c) => EMAIL_RE.test(c.toLowerCase()))
+    // Array.from (not .map) so empty cells — which arrive as sparse holes —
+    // become '' instead of undefined; otherwise .find() hits undefined.toLowerCase().
+    const cells: string[] = Array.from(row, (c) => (c == null ? '' : String(c)).trim())
+    const email = cells.find((c) => c !== '' && EMAIL_RE.test(c.toLowerCase()))
     if (!email) continue
     const name =
       cells.find(
-        (c) => c && c !== email && !EMAIL_RE.test(c.toLowerCase()) && !/^[\d\s+()./-]+$/.test(c),
+        (c) => c !== '' && c !== email && !EMAIL_RE.test(c.toLowerCase()) && !/^[\d\s+()./-]+$/.test(c),
       ) ?? null
     out.push({ email, name })
   }
