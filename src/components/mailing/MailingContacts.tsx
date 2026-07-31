@@ -14,6 +14,7 @@ import {
 
 const inputClass =
   'min-w-0 border border-white/10 bg-transparent px-4 py-3 text-sm tracking-[0.1em] text-white placeholder:text-white/25 focus:border-white/40 focus:outline-none transition-colors duration-300'
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export default function MailingContacts() {
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -25,6 +26,8 @@ export default function MailingContacts() {
   const [newGroup, setNewGroup] = useState('')
   const [targetGroup, setTargetGroup] = useState<string>('') // '' = todos (general)
   const [query, setQuery] = useState('')
+  const [manualEmail, setManualEmail] = useState('')
+  const [manualName, setManualName] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   const reload = async () => {
@@ -64,6 +67,36 @@ export default function MailingContacts() {
           ? e.message
           : 'No se pudo procesar el archivo. Revisa que sea .xlsx o .csv.',
       )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onAddOne = async () => {
+    const email = manualEmail.trim().toLowerCase()
+    if (!EMAIL_RE.test(email)) {
+      setError('Escribe un correo válido.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const one = [{ email, name: manualName.trim() || null }]
+      const res = targetGroup
+        ? await saveContactsToGroup(targetGroup, one)
+        : await saveContacts(one)
+      setNotice(
+        res.added > 0
+          ? `Contacto agregado${targetGroup ? ' al grupo.' : '.'}`
+          : `Ese correo ya estaba en la lista${targetGroup ? ' — se agregó al grupo.' : ' (no se duplica).'}`,
+      )
+      setManualEmail('')
+      setManualName('')
+      await reload()
+    } catch (e) {
+      console.error('Error al agregar contacto:', e)
+      setError(e instanceof Error && e.message ? e.message : 'No se pudo agregar el contacto.')
     } finally {
       setBusy(false)
     }
@@ -145,6 +178,44 @@ export default function MailingContacts() {
             {error}
           </p>
         )}
+      </section>
+
+      {/* add one manually */}
+      <section className="flex flex-col gap-4">
+        <h2 className="noid-label">AGREGAR UNO</h2>
+        <p className="text-xs leading-loose tracking-[0.1em] text-white/60">
+          Agrega un correo a mano. Se guarda en «{targetGroup
+            ? groups.find((g) => g.id === targetGroup)?.name ?? 'el grupo'
+            : 'Todos (general)'}» (cámbialo arriba en «Guardar en»).
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="email"
+            value={manualEmail}
+            onChange={(e) => setManualEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onAddOne())}
+            placeholder="correo@ejemplo.com"
+            aria-label="Correo del contacto"
+            className={`${inputClass} flex-1`}
+          />
+          <input
+            type="text"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onAddOne())}
+            placeholder="NOMBRE (OPCIONAL)"
+            aria-label="Nombre del contacto"
+            className={`${inputClass} flex-1`}
+          />
+          <button
+            type="button"
+            onClick={() => void onAddOne()}
+            disabled={busy || !manualEmail.trim()}
+            className="noid-button disabled:opacity-40"
+          >
+            + Agregar
+          </button>
+        </div>
       </section>
 
       {/* groups */}
