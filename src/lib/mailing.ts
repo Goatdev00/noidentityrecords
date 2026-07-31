@@ -43,12 +43,35 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 export async function parseContactsFile(
   file: File,
 ): Promise<{ email: string; name: string | null }[]> {
-  const XLSX = await import('xlsx')
-  const buf = await file.arrayBuffer()
-  const wb = XLSX.read(new Uint8Array(buf), { type: 'array' })
+  // xlsx is CommonJS and lazy-loaded; tolerate both the named-export and the
+  // default-export interop shapes, and a stale chunk after a redeploy.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let XLSX: any
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mod: any = await import('xlsx')
+    XLSX = mod?.read ? mod : (mod?.default ?? mod)
+  } catch {
+    throw new Error(
+      'El sitio se actualizó. Recarga la página (Ctrl/Cmd + Shift + R) e intenta de nuevo.',
+    )
+  }
+  if (typeof XLSX?.read !== 'function') {
+    throw new Error('No se pudo cargar el lector de Excel. Recarga la página e intenta de nuevo.')
+  }
+
+  let wb
+  try {
+    const buf = await file.arrayBuffer()
+    wb = XLSX.read(new Uint8Array(buf), { type: 'array' })
+  } catch {
+    throw new Error(
+      'No pudimos leer el archivo. Asegúrate de que sea un .xlsx, .xls o .csv válido y sin contraseña.',
+    )
+  }
   const sheet = wb.Sheets[wb.SheetNames[0]]
   if (!sheet) return []
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false })
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as unknown[][]
   const out: { email: string; name: string | null }[] = []
   for (const row of rows) {
     if (!Array.isArray(row)) continue

@@ -57,8 +57,13 @@ export default function MailingContacts() {
           (targetGroup ? ' y se agregaron al grupo.' : '.'),
       )
       await reload()
-    } catch {
-      setError('No se pudo procesar el archivo.')
+    } catch (e) {
+      console.error('Error al subir la lista de contactos:', e)
+      setError(
+        e instanceof Error && e.message
+          ? e.message
+          : 'No se pudo procesar el archivo. Revisa que sea .xlsx o .csv.',
+      )
     } finally {
       setBusy(false)
     }
