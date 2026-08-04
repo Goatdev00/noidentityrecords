@@ -115,8 +115,14 @@ Deno.serve(async (req) => {
       return json({ status: 'test_sent' })
     }
 
+    // Block a genuine in-progress send, but let a STUCK one be retried: if the
+    // background task was hard-killed (e.g. wall-clock limit) the status sits at
+    // 'sending' forever. A real send finishes in well under a minute, so treat
+    // anything stuck for >5 min as dead and allow re-triggering it.
     if (campaign.status === 'sending' || campaign.status === 'queued') {
-      return json({ error: 'La campaña ya se está enviando' }, 409)
+      const startedAt = new Date(campaign.updated_at ?? campaign.created_at ?? 0).getTime()
+      const stuck = Date.now() - startedAt > 5 * 60 * 1000
+      if (!stuck) return json({ error: 'La campaña ya se está enviando' }, 409)
     }
 
     await admin.from('mailing_campaigns').update({ status: 'queued', error: null }).eq('id', campaign_id)
@@ -208,19 +214,25 @@ async function runSend(admin: any, resendKey: string, c: Campaign) {
         })
         if (!res.ok) failed.push(rc)
       }
-      const CHUNK = 5
+      // Import throughput is the bottleneck: each contact is one API call, so
+      // the whole free-tier ceiling (1000 contacts) must finish well under the
+      // Edge Function wall-clock limit. 8 per chunk + 350ms ≈ 9.4 req/s — just
+      // under Resend's 10 req/s cap — puts 1000 contacts at ~105s (was ~200s,
+      // which timed out mid-import before the broadcast was ever created).
+      const CHUNK = 8
       for (let i = 0; i < recipients.length; i += CHUNK) {
         await Promise.all(recipients.slice(i, i + CHUNK).map(addOne))
-        await new Promise((r) => setTimeout(r, 600))
+        await new Promise((r) => setTimeout(r, 350))
       }
-      for (const rc of failed.splice(0)) { await addOne(rc); await new Promise((r) => setTimeout(r, 250)) }
+      for (const rc of failed.splice(0)) { await addOne(rc); await new Promise((r) => setTimeout(r, 300)) }
 
       const bRes = await rsend('/broadcasts', 'POST', {
         audience_id: AUD, from, reply_to: c.reply_to ?? undefined,
         subject: c.subject, name: c.subject, html: buildHtml(c, '{{{RESEND_UNSUBSCRIBE_URL}}}'),
       })
-      const BC = (await bRes.json()).id
-      if (!BC) throw new Error(`No se pudo crear el broadcast: ${JSON.stringify(await bRes.json?.() ?? {})}`)
+      const bJson = await bRes.json().catch(() => ({}))
+      const BC = bJson?.id
+      if (!BC) throw new Error(`No se pudo crear el broadcast: ${JSON.stringify(bJson).slice(0, 180)}`)
       const sRes = await rsend(`/broadcasts/${BC}/send`, 'POST', {})
       if (!sRes.ok) throw new Error(`Envío: ${(await sRes.text()).slice(0, 200)}`)
     }
