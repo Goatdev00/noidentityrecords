@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import EmptyState from '../components/EmptyState'
+import LessonPlayer from '../components/learn/LessonPlayer'
 import {
   fetchCourseBySlug,
   fetchEnrollmentStatus,
+  fetchPreviewLessonId,
   fetchTemario,
   type CourseDetail,
   type EnrollmentStatus,
+  type LessonMeta,
   type ModuleWithLessons,
 } from '../lib/academia'
+import { fetchLessonContent } from '../lib/learn'
+import { parseVideo, type ParsedVideo } from '../lib/video'
 import { formatCOP } from '../lib/format'
 import { useAuth } from '../lib/auth'
+
+const noop = () => {}
 
 function LockIcon() {
   return (
@@ -43,6 +50,10 @@ export default function Curso() {
   const [enrollment, setEnrollment] = useState<EnrollmentStatus | null>(null)
   const [enrollmentError, setEnrollmentError] = useState(false)
   const [buyNotice, setBuyNotice] = useState(false)
+  // the course's first lesson is free for everyone — its invitation/trailer
+  const [freeLesson, setFreeLesson] = useState<{ lesson: LessonMeta; video: ParsedVideo } | null>(
+    null,
+  )
 
   useEffect(() => {
     if (!slug) return
@@ -98,6 +109,26 @@ export default function Curso() {
       cancelled = true
     }
   }, [state, session, authLoading, lessonIds])
+
+  useEffect(() => {
+    setFreeLesson(null)
+    if (state.status !== 'ready') return
+    let cancelled = false
+    const { course, temario } = state
+    ;(async () => {
+      const id = await fetchPreviewLessonId(course.id)
+      const lesson = temario.flatMap((m) => m.lessons).find((l) => l.id === id)
+      if (!id || !lesson) return
+      const video = parseVideo((await fetchLessonContent(id))?.video_url)
+      // no playable video yet → no preview block, no GRATIS tag
+      if (!cancelled && video.provider !== 'unknown') setFreeLesson({ lesson, video })
+    })().catch(() => {
+      // the preview is a bonus; the landing works fine without it
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [state])
 
   useEffect(() => {
     if (state.status === 'ready') {
@@ -262,6 +293,31 @@ export default function Curso() {
         </div>
       </section>
 
+      {freeLesson && (
+        <section
+          id="leccion-gratis"
+          aria-label="Lección gratis"
+          className="flex scroll-mt-32 flex-col gap-6"
+        >
+          <h2 className="noid-label pl-2">LECCIÓN GRATIS</h2>
+          <LessonPlayer
+            video={freeLesson.video}
+            lessonId={freeLesson.lesson.id}
+            onEnded={noop}
+          />
+          <div className="flex flex-col gap-2">
+            <p className="noid-title text-base leading-relaxed text-white md:text-lg">
+              {freeLesson.lesson.title}
+            </p>
+            {freeLesson.lesson.subtitle && (
+              <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                {freeLesson.lesson.subtitle}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
       {course.description && (
         <section aria-label="Descripción" className="max-w-3xl">
           <p className="whitespace-pre-line text-sm leading-loose tracking-[0.05em] text-white/60">
@@ -311,7 +367,14 @@ export default function Curso() {
                             </p>
                           )}
                         </div>
-                        {!canView && (
+                        {lesson.id === freeLesson?.lesson.id ? (
+                          <a
+                            href="#leccion-gratis"
+                            className="shrink-0 text-[9px] uppercase tracking-[0.3em] text-accent transition-opacity hover:opacity-70"
+                          >
+                            Gratis
+                          </a>
+                        ) : !canView && (
                           <span className="text-white/25" title="Contenido bloqueado">
                             <LockIcon />
                             <span className="sr-only">Contenido bloqueado</span>

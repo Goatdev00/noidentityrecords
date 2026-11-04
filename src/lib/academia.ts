@@ -71,6 +71,15 @@ export async function fetchTemario(courseId: string): Promise<ModuleWithLessons[
   return (data ?? []) as ModuleWithLessons[]
 }
 
+/** Id of the course's free preview lesson (its first lesson), or null.
+ *  The server decides which one — lesson_content RLS opens exactly that row
+ *  to everyone, so the landing can play it without an enrollment. */
+export async function fetchPreviewLessonId(courseId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('preview_lesson_id', { p_course_id: courseId })
+  if (error) throw error
+  return (data as string | null) ?? null
+}
+
 export type EnrolledCourse = {
   courseId: string
   slug: string

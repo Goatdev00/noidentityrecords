@@ -1,7 +1,8 @@
 // RLS smoke test — runs with the PUBLIC anon key only (safe to re-run anytime):
 //   node scripts/test-rls.mjs
 // Verifies the brief's §15 mandate from the outside: an anonymous client must
-// never read lesson_content, insert enrollments, or see private rows.
+// never read lesson_content (except each course's free first lesson), insert
+// enrollments, or see private rows.
 const REF = process.env.SUPABASE_REF ?? 'ztzgnorjnffpgytnwnvy'
 const ANON =
   process.env.VITE_SUPABASE_ANON_KEY ??
@@ -27,9 +28,28 @@ const check = (name, ok, detail) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}  (${detail})`)
 }
 
-const lc = await anon('lesson_content?select=*')
-check('anon cannot read lesson_content', lc.status === 200 && lc.body === '[]',
-  `status=${lc.status} body=${lc.body}`)
+// The only lesson_content anon may read is each published course's free
+// preview lesson (its first lesson) — never any other row.
+const lcRes = await fetch(`${REST}/lesson_content?select=lesson_id`, {
+  headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+})
+const lcRows = lcRes.ok ? await lcRes.json() : null
+const coursesRes = await fetch(`${REST}/courses?select=id`, {
+  headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+})
+const allowed = new Set()
+for (const c of coursesRes.ok ? await coursesRes.json() : []) {
+  const r = await fetch(`${REST}/rpc/preview_lesson_id`, {
+    method: 'POST',
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_course_id: c.id }),
+  })
+  const id = r.ok ? await r.json() : null
+  if (id) allowed.add(id)
+}
+const leaked = (lcRows ?? []).filter((r) => !allowed.has(r.lesson_id))
+check('anon reads only free preview lesson_content', lcRows !== null && leaked.length === 0,
+  `status=${lcRes.status} rows=${lcRows?.length} preview=${allowed.size} leaked=${leaked.length}`)
 
 const enr = await anon('enrollments', {
   method: 'POST',
