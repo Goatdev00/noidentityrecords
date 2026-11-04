@@ -9,6 +9,7 @@ export const NAV_ITEMS = [
   { label: 'ACADEMIA', to: '/academia' },
   { label: 'MERCH', to: '/merch' },
   { label: 'RECORD LABEL', to: '/label' },
+  { label: 'ARTISTAS', to: '/artistas' },
   { label: 'EVENTOS', to: '/eventos' },
   { label: 'NOSOTROS', to: '/nosotros' },
 ] as const

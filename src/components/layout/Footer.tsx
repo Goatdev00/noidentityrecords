@@ -5,6 +5,7 @@ const FOOTER_LINKS = [
   { label: 'Academia', to: '/academia' },
   { label: 'Merch', to: '/merch' },
   { label: 'Record Label', to: '/label' },
+  { label: 'Artistas', to: '/artistas' },
   { label: 'Eventos', to: '/eventos' },
   { label: 'Nosotros', to: '/nosotros' },
   { label: 'Términos', to: '/terminos' },

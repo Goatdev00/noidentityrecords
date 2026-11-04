@@ -3,14 +3,16 @@ import EventsAdmin from '../components/admin/EventsAdmin'
 import MerchAdmin from '../components/admin/MerchAdmin'
 import MediaAdmin from '../components/admin/MediaAdmin'
 import EnrollmentsAdmin from '../components/admin/EnrollmentsAdmin'
+import ArtistsAdmin from '../components/admin/ArtistsAdmin'
 import type { MediaSection } from '../lib/admin'
 
-type Tab = 'eventos' | 'merch' | 'label' | 'inscritos'
+type Tab = 'eventos' | 'merch' | 'label' | 'artistas' | 'inscritos'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'eventos', label: 'Eventos' },
   { id: 'merch', label: 'Merch' },
   { id: 'label', label: 'Record Label' },
+  { id: 'artistas', label: 'Artistas' },
   { id: 'inscritos', label: 'Inscritos' },
 ]
 
@@ -28,18 +30,21 @@ export default function Gestion() {
       <header className="flex flex-col gap-4">
         <p className="noid-label">GESTIÓN</p>
         <h1 className="noid-title text-lg leading-relaxed text-white md:text-2xl">
-          EVENTOS, TIENDA Y MÚSICA
+          EVENTOS, TIENDA, MÚSICA Y ARTISTAS
         </h1>
       </header>
 
-      <nav className="flex gap-6 border-b border-white/5" aria-label="Secciones de gestión">
+      <nav
+        className="flex gap-6 overflow-x-auto border-b border-white/5"
+        aria-label="Secciones de gestión"
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id}
-            className={`-mb-px border-b-2 pb-3 font-display text-[11px] uppercase tracking-[0.25em] transition-colors ${
+            className={`-mb-px shrink-0 border-b-2 pb-3 font-display text-[11px] uppercase tracking-[0.25em] transition-colors ${
               tab === t.id
                 ? 'border-white text-white'
                 : 'border-transparent text-white/40 hover:text-white'
@@ -53,6 +58,7 @@ export default function Gestion() {
       {tab === 'eventos' && <EventsAdmin />}
       {tab === 'merch' && <MerchAdmin />}
       {tab === 'inscritos' && <EnrollmentsAdmin />}
+      {tab === 'artistas' && <ArtistsAdmin />}
       {tab === 'label' && (
         <div className="flex flex-col gap-8">
           <div className="flex flex-wrap gap-3" role="group" aria-label="Tipo de contenido">

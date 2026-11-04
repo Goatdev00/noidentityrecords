@@ -24,6 +24,9 @@ import Gestion from './pages/Gestion'
 import Verificar from './pages/Verificar'
 import Terminos from './pages/Terminos'
 import Contacto from './pages/Contacto'
+import Artistas from './pages/Artistas'
+import Artista from './pages/Artista'
+import MiArtista from './pages/MiArtista'
 import NotFound from './pages/NotFound'
 
 const TITLES: Record<string, string> = {
@@ -37,6 +40,8 @@ const TITLES: Record<string, string> = {
   '/login': 'Acceso — NO.IDENTITY RECORDS',
   '/restablecer': 'Nueva contraseña — NO.IDENTITY RECORDS',
   '/perfil': 'Mi perfil — NO.IDENTITY RECORDS',
+  '/perfil/artista': 'Perfil de artista — NO.IDENTITY RECORDS',
+  '/artistas': 'Artistas — NO.IDENTITY RECORDS',
   '/panel': 'Panel de maestro — NO.IDENTITY RECORDS',
   '/mailing': 'Mailing — NO.IDENTITY RECORDS',
   '/gestion': 'Gestión — NO.IDENTITY RECORDS',
@@ -66,7 +71,9 @@ function RouteChange() {
             ? 'Panel de maestro — NO.IDENTITY RECORDS'
             : pathname.startsWith('/verificar/')
               ? 'Verificar certificado — NO.IDENTITY RECORDS'
-              : 'Nada aquí — NO.IDENTITY RECORDS')
+              : pathname.startsWith('/artistas/')
+                ? 'Artistas — NO.IDENTITY RECORDS'
+                : 'Nada aquí — NO.IDENTITY RECORDS')
     if (navType === 'POP') return
     if (hash) {
       // anchor navigation (e.g. /perfil#cursos) — honor it instead of top
@@ -100,6 +107,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <Aprender />
+              </RequireAuth>
+            }
+          />
+          <Route path="/artistas" element={<Artistas />} />
+          <Route path="/artistas/:slug" element={<Artista />} />
+          <Route
+            path="/perfil/artista"
+            element={
+              <RequireAuth>
+                <MiArtista />
               </RequireAuth>
             }
           />

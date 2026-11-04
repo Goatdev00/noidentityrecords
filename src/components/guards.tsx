@@ -32,7 +32,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (loading) return <Waiting />
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    // keep the query (e.g. /perfil/artista?vincular=slug) so it survives login
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
   }
   return <>{children}</>
 }

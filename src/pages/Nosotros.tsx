@@ -1,15 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { WHATSAPP_CHANNEL } from '../lib/constants'
-
-type Artist = {
-  id: string
-  name: string
-  subtitle: string | null
-  image_url: string | null
-  links: { label: string; url: string }[]
-}
 
 function WhatsAppIcon() {
   return (
@@ -20,23 +10,6 @@ function WhatsAppIcon() {
 }
 
 export default function Nosotros() {
-  const [artists, setArtists] = useState<Artist[] | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    supabase
-      .from('artists')
-      .select('id, name, subtitle, image_url, links')
-      .eq('active', true)
-      .order('position')
-      .then(({ data, error }) => {
-        if (!cancelled) setArtists(error ? [] : ((data ?? []) as Artist[]))
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-24 px-6 pb-28 pt-12 md:pt-20">
       <header className="flex flex-col items-center gap-6 text-center">
@@ -82,51 +55,17 @@ export default function Nosotros() {
         </div>
       </section>
 
-      {/* artistas */}
+      {/* artistas — the full catalog lives at /artistas */}
       <section id="artistas" aria-label="Artistas" className="flex scroll-mt-32 flex-col gap-8">
         <h2 className="noid-label pl-1">ARTISTAS</h2>
-        {artists === null ? (
-          <p className="noid-label animate-pulse py-8 text-center" role="status">
-            CARGANDO
+        <div className="noid-card flex flex-col items-center gap-6 p-10 text-center">
+          <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
+            CONOCE A QUIENES HAN HECHO PARTE DE NO.ID.
           </p>
-        ) : artists.length === 0 ? (
-          <div className="noid-card flex items-center justify-center p-12 text-center">
-            <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
-              MUY PRONTO PRESENTAREMOS A LOS ARTISTAS DEL COLECTIVO.
-            </p>
-          </div>
-        ) : (
-          <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-            {artists.map((a) => (
-              <li key={a.id} className="noid-card flex flex-col">
-                <div className="aspect-square w-full overflow-hidden bg-white/[0.02]">
-                  {a.image_url ? (
-                    <img
-                      src={a.image_url}
-                      alt={a.name}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <img src="/logo-noid-wordmark.png" alt="" className="w-16 opacity-10" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 px-4 py-4">
-                  <p className="truncate text-[11px] uppercase tracking-[0.15em] text-white">
-                    {a.name}
-                  </p>
-                  {a.subtitle && (
-                    <p className="truncate text-[9px] uppercase tracking-[0.2em] text-white/40">
-                      {a.subtitle}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          <Link to="/artistas" className="noid-button">
+            Ver catálogo de artistas
+          </Link>
+        </div>
       </section>
     </div>
   )

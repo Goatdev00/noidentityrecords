@@ -109,6 +109,9 @@ export default function UserMenu() {
           <Link to="/perfil#pedidos" onClick={() => setOpen(false)} className={itemClass}>
             Mis pedidos
           </Link>
+          <Link to="/perfil/artista" onClick={() => setOpen(false)} className={itemClass}>
+            Perfil de artista
+          </Link>
           {isTeacher && (
             <Link to="/panel" onClick={() => setOpen(false)} className={itemClass}>
               Panel de maestro

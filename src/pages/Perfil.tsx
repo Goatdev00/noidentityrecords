@@ -8,6 +8,7 @@ import {
   type MyCertificate,
 } from '../lib/certificates'
 import { fetchMyEnrollments, type EnrolledCourse } from '../lib/academia'
+import { fetchMyArtist, type Artist } from '../lib/artists'
 
 const ROLE_LABEL: Record<string, string> = {
   student: 'ESTUDIANTE',
@@ -25,7 +26,25 @@ export default function Perfil() {
   const [certificates, setCertificates] = useState<MyCertificate[]>([])
   const [courses, setCourses] = useState<EnrolledCourse[] | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  // undefined = loading, null = no artist profile yet
+  const [artist, setArtist] = useState<Artist | null | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
+  const uid = session?.user.id
+
+  useEffect(() => {
+    if (!uid) return
+    let cancelled = false
+    fetchMyArtist(uid)
+      .then((a) => {
+        if (!cancelled) setArtist(a)
+      })
+      .catch(() => {
+        if (!cancelled) setArtist(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [uid])
 
   useEffect(() => {
     let cancelled = false
@@ -208,6 +227,38 @@ export default function Perfil() {
           {notice ?? ''}
         </p>
       </form>
+
+      <section id="artista" aria-label="Perfil de artista" className="flex scroll-mt-28 flex-col gap-6">
+        <h2 className="noid-label">PERFIL DE ARTISTA</h2>
+        <Link to="/perfil/artista" className="noid-card flex items-center gap-4 px-6 py-5">
+          <div className="min-w-0 flex-1">
+            {artist ? (
+              <>
+                <p className="truncate text-[11px] uppercase tracking-[0.15em] text-white">
+                  {artist.name}
+                </p>
+                <p className="mt-1 text-[9px] uppercase tracking-[0.25em] text-white/40">
+                  {artist.status === 'approved'
+                    ? 'Publicado en el catálogo'
+                    : artist.status === 'pending'
+                      ? 'En revisión'
+                      : 'Oculto'}{' '}
+                  · Editar
+                </p>
+              </>
+            ) : (
+              <p className="text-xs leading-loose tracking-[0.15em] text-white/60">
+                {artist === undefined
+                  ? 'CARGANDO…'
+                  : '¿ERES ARTISTA? CREA TU PERFIL O VINCULA EL TUYO EN EL CATÁLOGO.'}
+              </p>
+            )}
+          </div>
+          <span aria-hidden="true" className="shrink-0 text-white/30">
+            →
+          </span>
+        </Link>
+      </section>
 
       <section id="cursos" aria-label="Mis cursos" className="flex scroll-mt-28 flex-col gap-6">
         <h2 className="noid-label">MIS CURSOS</h2>

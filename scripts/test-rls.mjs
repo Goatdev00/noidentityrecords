@@ -73,6 +73,19 @@ const certs = await anon('certificates?select=*')
 check('anon sees zero certificates', certs.status === 200 && certs.body === '[]',
   `status=${certs.status} body=${certs.body}`)
 
+// artist catalog: only approved profiles are public, claim requests never are
+const hiddenArtists = await anon('artists?select=id&status=neq.approved')
+check('anon sees zero pending/hidden artists', hiddenArtists.status === 200 && hiddenArtists.body === '[]',
+  `status=${hiddenArtists.status} body=${hiddenArtists.body}`)
+
+const artistClaims = await anon('artist_claims?select=*')
+check('anon sees zero artist claims', artistClaims.status === 200 && artistClaims.body === '[]',
+  `status=${artistClaims.status} body=${artistClaims.body}`)
+
+const spamArtist = await anon('artists', { method: 'POST', body: JSON.stringify({ name: 'rls-test' }) })
+check('anon cannot create artists', spamArtist.status === 401 || spamArtist.status === 403,
+  `status=${spamArtist.status}`)
+
 const emb = await anon('media_embeds?select=title&active=eq.true&limit=1')
 check('anon can read active media_embeds', emb.status === 200 && emb.body !== '[]',
   `status=${emb.status} body=${emb.body}`)
