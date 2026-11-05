@@ -19,6 +19,16 @@ import { useAuth } from '../lib/auth'
 
 const noop = () => {}
 
+/** "Introducción", "INTRO", "introduccion" … → the heading already says it */
+const isIntroTitle = (t: string) =>
+  /^intro(duccion)?$/.test(
+    t
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .trim()
+      .toLowerCase(),
+  )
+
 function LockIcon() {
   return (
     <svg
@@ -50,7 +60,7 @@ export default function Curso() {
   const [enrollment, setEnrollment] = useState<EnrollmentStatus | null>(null)
   const [enrollmentError, setEnrollmentError] = useState(false)
   const [buyNotice, setBuyNotice] = useState(false)
-  // the course's first lesson is free for everyone — its invitation/trailer
+  // the course's first lesson (its introduction) is open to everyone
   const [freeLesson, setFreeLesson] = useState<{ lesson: LessonMeta; video: ParsedVideo } | null>(
     null,
   )
@@ -294,27 +304,29 @@ export default function Curso() {
       </section>
 
       {freeLesson && (
-        <section
-          id="leccion-gratis"
-          aria-label="Lección gratis"
-          className="flex scroll-mt-32 flex-col gap-6"
-        >
-          <h2 className="noid-label pl-2">LECCIÓN GRATIS</h2>
+        <section id="introduccion" aria-label="Introducción" className="flex scroll-mt-32 flex-col gap-6">
+          <h2 className="noid-label pl-2">INTRODUCCIÓN</h2>
           <LessonPlayer
             video={freeLesson.video}
             lessonId={freeLesson.lesson.id}
             onEnded={noop}
+            title={freeLesson.lesson.title}
           />
-          <div className="flex flex-col gap-2">
-            <p className="noid-title text-base leading-relaxed text-white md:text-lg">
-              {freeLesson.lesson.title}
-            </p>
-            {freeLesson.lesson.subtitle && (
-              <p className="text-xs uppercase tracking-[0.2em] text-white/50">
-                {freeLesson.lesson.subtitle}
-              </p>
-            )}
-          </div>
+          {/* the teacher's own title, unless it just repeats the heading */}
+          {(!isIntroTitle(freeLesson.lesson.title) || freeLesson.lesson.subtitle) && (
+            <div className="flex flex-col gap-2">
+              {!isIntroTitle(freeLesson.lesson.title) && (
+                <p className="noid-title text-base leading-relaxed text-white md:text-lg">
+                  {freeLesson.lesson.title}
+                </p>
+              )}
+              {freeLesson.lesson.subtitle && (
+                <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+                  {freeLesson.lesson.subtitle}
+                </p>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -369,10 +381,11 @@ export default function Curso() {
                         </div>
                         {lesson.id === freeLesson?.lesson.id ? (
                           <a
-                            href="#leccion-gratis"
+                            href="#introduccion"
+                            aria-label="Ver la introducción"
                             className="shrink-0 text-[9px] uppercase tracking-[0.3em] text-accent transition-opacity hover:opacity-70"
                           >
-                            Gratis
+                            Ver
                           </a>
                         ) : !canView && (
                           <span className="text-white/25" title="Contenido bloqueado">

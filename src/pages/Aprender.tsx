@@ -381,6 +381,7 @@ export default function Aprender() {
               <LessonPlayer
                 video={video}
                 lessonId={current.id}
+                title={current.title}
                 onEnded={() => {
                   if (!preview && !completed.has(current.id)) void setDone(current.id, true)
                 }}
